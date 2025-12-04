@@ -1,5 +1,3 @@
-#module_parameters (lib_name := "skia");
-
 #import "Basic";
 #import "Math";
 #import "POSIX";
@@ -32,11 +30,7 @@ std :: struct {
 
 va_list :: *void;
 // FILE is imported from POSIX
-
-S16_MAX :: 32767;
-S32_MAX :: 2147483647;
-S64_MAX :: 9223372036854775807;
-S32_MIN :: -2147483648;
+// S16_MAX, S32_MAX, S64_MAX, S32_MIN are from Math module
 
 SK_FloatInfinity :: FLOAT32_INFINITY;
 
@@ -7501,7 +7495,6 @@ SkBlurMaskFilterImpl :: struct {}
 
 SkDevice :: struct {}
 SkDrawable :: struct {}
-SkFont :: struct {}
 
 SkMesh :: struct {}
 SkPaintFilterCanvas :: struct {}
@@ -7515,7 +7508,7 @@ SkRecorder :: struct {}
 SkSpecialImage :: struct {}
 
 SkSurface_Base :: struct {}
-SkTextBlob :: struct {}
+
 SkVertices :: struct {}
 SkDrawShadowRec :: struct {}
 
@@ -10544,981 +10537,6 @@ operator_assign :: (this: *SkAutoCanvasRestore, unknown0: SkAutoCanvasRestore) -
     return operator_assign(this, *unknown0);
 }
 
-GrDirectContext :: struct {}
-
-SkImageGenerator :: struct {}
-
-SkMipmap :: struct {}
-
-SkTextureCompressionType :: enum s32 {
-}
-
-SkImages :: struct {
-    /** Caller data passed to RasterReleaseProc; may be nullptr. */
-    ReleaseContext :: *void;
-
-    /** Function called when SkImage no longer shares pixels. ReleaseContext is
-    provided by caller when SkImage is created, and may be nullptr.
-    */
-    RasterReleaseProc :: #type (pixels: *void, unknown0: ReleaseContext) -> void #c_call;
-
-    /** Creates a CPU-backed SkImage from bitmap, sharing or copying bitmap pixels. If the bitmap
-    is marked immutable, and its pixel memory is shareable, it may be shared
-    instead of copied.
-    
-    SkImage is returned if bitmap is valid. Valid SkBitmap parameters include:
-    dimensions are greater than zero;
-    each dimension fits in 29 bits;
-    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
-    row bytes are large enough to hold one row of pixels;
-    pixel address is not nullptr.
-    
-    @param bitmap  SkImageInfo, row bytes, and pixels
-    @return        created SkImage, or nullptr
-    */
-    RasterFromBitmap :: (bitmap: *SkBitmap) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages16RasterFromBitmapERK8SkBitmap";
-    RasterFromBitmap :: (bitmap: SkBitmap) -> sk_sp(SkImage) #no_context {
-        return RasterFromBitmap(*bitmap);
-    }
-
-    /** Creates a CPU-backed SkImage from compressed data.
-    
-    This method will decompress the compressed data and create an image wrapping
-    it. Any mipmap levels present in the compressed data are discarded.
-    
-    @param data     compressed data to store in SkImage
-    @param width    width of full SkImage
-    @param height   height of full SkImage
-    @param type     type of compression used
-    @return         created SkImage, or nullptr
-    */
-    RasterFromCompressedTextureData :: (data: sk_sp(SkData), width: s32, height: s32, type: SkTextureCompressionType) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages31RasterFromCompressedTextureDataE5sk_spI6SkDataEii24SkTextureCompressionType";
-
-    /**
-    *  Return a SkImage using the encoded data, but attempts to defer decoding until the
-    *  image is actually used/drawn. This deferral allows the system to cache the result, either on the
-    *  CPU or on the GPU, depending on where the image is drawn. If memory is low, the cache may
-    *  be purged, causing the next draw of the image to have to re-decode.
-    *
-    *  If alphaType is nullopt, the image's alpha type will be chosen automatically based on the
-    *  image format. Transparent images will default to kPremul_SkAlphaType. If alphaType contains
-    *  kPremul_SkAlphaType or kUnpremul_SkAlphaType, that alpha type will be used. Forcing opaque
-    *  (passing kOpaque_SkAlphaType) is not allowed, and will return nullptr.
-    *
-    *  If the encoded format is not supported, nullptr is returned.
-    *
-    *  If possible, clients should use SkCodecs::DeferredImage instead.
-    *
-    *  @param encoded  the encoded data
-    *  @return         created SkImage, or nullptr
-    
-    example: https://fiddle.skia.org/c/@Image_DeferredFromEncodedData
-    */
-    DeferredFromEncodedData :: (encoded: sk_sp(SkData), alphaType: std.optional(SkAlphaType)) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages23DeferredFromEncodedDataE5sk_spIK6SkDataESt8optionalI11SkAlphaTypeE";
-
-    /** Creates SkImage from data returned by imageGenerator. The image data will not be created
-    (on either the CPU or GPU) until the image is actually drawn.
-    Generated data is owned by SkImage and may not be shared or accessed.
-    
-    SkImage is returned if generator data is valid. Valid data parameters vary by type of data
-    and platform.
-    
-    imageGenerator may wrap SkPicture data, codec data, or custom data.
-    
-    @param imageGenerator  stock or custom routines to retrieve SkImage
-    @return                created SkImage, or nullptr
-    */
-    DeferredFromGenerator :: (imageGenerator: std.unique_ptr(SkImageGenerator)) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages21DeferredFromGeneratorESt10unique_ptrI16SkImageGeneratorSt14default_deleteIS1_EE";
-
-    BitDepth :: enum s32 {
-        U8  :: 0;
-        F16 :: 1;
-
-        kU8  :: U8;
-        kF16 :: F16;
-    }
-
-    /** Creates SkImage from picture. Returned SkImage width and height are set by dimensions.
-    SkImage draws picture with matrix and paint, set to bitDepth and colorSpace.
-    
-    The Picture data is not turned into an image (CPU or GPU) until it is drawn.
-    
-    If matrix is nullptr, draws with identity SkMatrix. If paint is nullptr, draws
-    with default SkPaint. colorSpace may be nullptr.
-    
-    @param picture     stream of drawing commands
-    @param dimensions  width and height
-    @param matrix      SkMatrix to rotate, scale, translate, and so on; may be nullptr
-    @param paint       SkPaint to apply transparency, filtering, and so on; may be nullptr
-    @param bitDepth    8-bit integer or 16-bit float: per component
-    @param colorSpace  range of colors; may be nullptr
-    @param props       props to use when rasterizing the picture
-    @return            created SkImage, or nullptr
-    */
-    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: *SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace), props: SkSurfaceProps) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages19DeferredFromPictureE5sk_spI9SkPictureERK7SkISizePK8SkMatrixPK7SkPaintNS_8BitDepthES0_I12SkColorSpaceE14SkSurfaceProps";
-    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace), props: SkSurfaceProps) -> sk_sp(SkImage) #no_context {
-        return DeferredFromPicture(picture, *dimensions, matrix, paint, bitDepth, colorSpace, props);
-    }
-
-    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: *SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace)) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages19DeferredFromPictureE5sk_spI9SkPictureERK7SkISizePK8SkMatrixPK7SkPaintNS_8BitDepthES0_I12SkColorSpaceE";
-    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace)) -> sk_sp(SkImage) #no_context {
-        return DeferredFromPicture(picture, *dimensions, matrix, paint, bitDepth, colorSpace);
-    }
-
-    /** Creates a CPU-backed SkImage from pixmap, copying the pixel data.
-    As a result, pixmap pixels may be modified or deleted without affecting SkImage.
-    
-    SkImage is returned if SkPixmap is valid. Valid SkPixmap parameters include:
-    dimensions are greater than zero;
-    each dimension fits in 29 bits;
-    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
-    row bytes are large enough to hold one row of pixels;
-    pixel address is not nullptr.
-    
-    @param pixmap  SkImageInfo, pixel address, and row bytes
-    @return        copy of SkPixmap pixels, or nullptr
-    
-    example: https://fiddle.skia.org/c/@Image_RasterFromPixmapCopy
-    */
-    RasterFromPixmapCopy :: (pixmap: *SkPixmap) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages20RasterFromPixmapCopyERK8SkPixmap";
-    RasterFromPixmapCopy :: (pixmap: SkPixmap) -> sk_sp(SkImage) #no_context {
-        return RasterFromPixmapCopy(*pixmap);
-    }
-
-    /** Creates CPU-backed SkImage from pixmap, sharing SkPixmap pixels. Pixels must remain valid and
-    unchanged until rasterReleaseProc is called. rasterReleaseProc is passed
-    releaseContext when SkImage is deleted or no longer refers to pixmap pixels.
-    
-    Pass nullptr for rasterReleaseProc to share SkPixmap without requiring a callback
-    when SkImage is released. Pass nullptr for releaseContext if rasterReleaseProc
-    does not require state.
-    
-    SkImage is returned if pixmap is valid. Valid SkPixmap parameters include:
-    dimensions are greater than zero;
-    each dimension fits in 29 bits;
-    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
-    row bytes are large enough to hold one row of pixels;
-    pixel address is not nullptr.
-    
-    @param pixmap             SkImageInfo, pixel address, and row bytes
-    @param rasterReleaseProc  function called when pixels can be released; or nullptr
-    @param releaseContext     state passed to rasterReleaseProc; or nullptr
-    @return                   SkImage sharing pixmap
-    */
-    RasterFromPixmap :: (pixmap: *SkPixmap, rasterReleaseProc: RasterReleaseProc, releaseContext: ReleaseContext) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages16RasterFromPixmapERK8SkPixmapPFvPKvPvES5_";
-    RasterFromPixmap :: (pixmap: SkPixmap, rasterReleaseProc: RasterReleaseProc, releaseContext: ReleaseContext) -> sk_sp(SkImage) #no_context {
-        return RasterFromPixmap(*pixmap, rasterReleaseProc, releaseContext);
-    }
-
-    /** Creates CPU-backed SkImage from pixel data described by info.
-    The pixels data will *not* be copied.
-    
-    SkImage is returned if SkImageInfo is valid. Valid SkImageInfo parameters include:
-    dimensions are greater than zero;
-    each dimension fits in 29 bits;
-    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
-    rowBytes are large enough to hold one row of pixels;
-    pixels is not nullptr, and contains enough data for SkImage.
-    
-    @param info      contains width, height, SkAlphaType, SkColorType, SkColorSpace
-    @param pixels    address or pixel storage
-    @param rowBytes  size of pixel row or larger
-    @return          SkImage sharing pixels, or nullptr
-    */
-    RasterFromData :: (info: *SkImageInfo, pixels: sk_sp(SkData), rowBytes: u64) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages14RasterFromDataERK11SkImageInfo5sk_spI6SkDataEm";
-    RasterFromData :: (info: SkImageInfo, pixels: sk_sp(SkData), rowBytes: u64) -> sk_sp(SkImage) #no_context {
-        return RasterFromData(*info, pixels, rowBytes);
-    }
-
-    /** Creates a filtered SkImage on the CPU. filter processes the src image, potentially changing
-    the color, position, and size. subset is the bounds of src that are processed
-    by filter. clipBounds is the expected bounds of the filtered SkImage. outSubset
-    is required storage for the actual bounds of the filtered SkImage. offset is
-    required storage for translation of returned SkImage.
-    
-    Returns nullptr a filtered result could not be created. If nullptr is returned, outSubset
-    and offset are undefined.
-    
-    Useful for animation of SkImageFilter that varies size from frame to frame.
-    outSubset describes the valid bounds of returned image. offset translates the returned SkImage
-    to keep subsequent animation frames aligned with respect to each other.
-    
-    @param src         the image to be filtered
-    @param filter      the image filter to be applied
-    @param subset      bounds of SkImage processed by filter
-    @param clipBounds  expected bounds of filtered SkImage
-    @param outSubset   storage for returned SkImage bounds
-    @param offset      storage for returned SkImage translation
-    @return            filtered SkImage, or nullptr
-    */
-    MakeWithFilter :: (src: sk_sp(SkImage), filter: *SkImageFilter, subset: *SkIRect, clipBounds: *SkIRect, outSubset: *SkIRect, offset: *SkIPoint) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages14MakeWithFilterE5sk_spI7SkImageEPK13SkImageFilterRK7SkIRectS8_PS6_P8SkIPoint";
-    MakeWithFilter :: (src: sk_sp(SkImage), filter: *SkImageFilter, subset: SkIRect, clipBounds: SkIRect, outSubset: *SkIRect, offset: *SkIPoint) -> sk_sp(SkImage) #no_context {
-        return MakeWithFilter(src, filter, *subset, *clipBounds, outSubset, offset);
-    }
-}
-
-/** \class SkImage
-SkImage describes a two dimensional array of pixels to draw. The pixels may be
-decoded in a raster bitmap, encoded in a SkPicture or compressed data stream,
-or located in GPU memory as a GPU texture.
-
-SkImage cannot be modified after it is created. SkImage may allocate additional
-storage as needed; for instance, an encoded SkImage may decode when drawn.
-
-SkImage width and height are greater than zero. Creating an SkImage with zero width
-or height returns SkImage equal to nullptr.
-
-SkImage may be created from SkBitmap, SkPixmap, SkSurface, SkPicture, encoded streams,
-GPU texture, YUV_ColorSpace data, or hardware buffer. Encoded streams supported
-include BMP, GIF, HEIF, ICO, JPEG, PNG, WBMP, WebP. Supported encoding details
-vary with platform.
-
-See SkImages namespace for the static factory methods to make SkImages.
-
-Clients should *not* subclass SkImage as there is a lot of internal machinery that is
-not publicly accessible.
-*/
-SkImage :: struct {
-    vtable:             *SkImage_VTable;
-    using skimage__raw: SkImage__RAW;
-    #place vtable; #as skrefcnt: SkRefCnt; // Support cast to SkRefCnt
-}
-// SkImage without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkImage
-SkImage__RAW :: struct {
-    using skrefcnt__raw: SkRefCnt__RAW;
-
-    /** Returns a SkImageInfo describing the width, height, color type, alpha type, and color space
-    of the SkImage.
-    
-    @return  image info of SkImage.
-    */
-//     imageInfo :: (this: *SkImage) -> *SkImageInfo #cpp_method #foreign libskia "_ZNK7SkImage9imageInfoEv";
-
-    /** Returns pixel count in each row.
-    
-    @return  pixel width in SkImage
-    */
-//     width :: (this: *SkImage) -> s32 #cpp_method #foreign libskia "_ZNK7SkImage5widthEv";
-
-    /** Returns pixel row count.
-    
-    @return  pixel height in SkImage
-    */
-//     height :: (this: *SkImage) -> s32 #cpp_method #foreign libskia "_ZNK7SkImage6heightEv";
-
-    /** Returns SkISize { width(), height() }.
-    
-    @return  integral size of width() and height()
-    */
-//     dimensions :: (this: *SkImage) -> SkISize #cpp_method #foreign libskia "_ZNK7SkImage10dimensionsEv";
-
-    /** Returns SkIRect { 0, 0, width(), height() }.
-    
-    @return  integral rectangle from origin to width() and height()
-    */
-//     bounds :: (this: *SkImage) -> SkIRect #cpp_method #foreign libskia "_ZNK7SkImage6boundsEv";
-
-    /** Returns value unique to image. SkImage contents cannot change after SkImage is
-    created. Any operation to create a new SkImage will receive generate a new
-    unique number.
-    
-    @return  unique identifier
-    */
-//     uniqueID :: (this: *SkImage) -> u32 #cpp_method #foreign libskia "_ZNK7SkImage8uniqueIDEv";
-
-    /** Returns SkAlphaType.
-    
-    SkAlphaType returned was a parameter to an SkImage constructor,
-    or was parsed from encoded data.
-    
-    @return  SkAlphaType in SkImage
-    
-    example: https://fiddle.skia.org/c/@Image_alphaType
-    */
-    alphaType :: (this: *SkImage) -> SkAlphaType #cpp_method #foreign libskia "_ZNK7SkImage9alphaTypeEv";
-
-    /** Returns SkColorType if known; otherwise, returns kUnknown_SkColorType.
-    
-    @return  SkColorType of SkImage
-    
-    example: https://fiddle.skia.org/c/@Image_colorType
-    */
-    colorType :: (this: *SkImage) -> SkColorType #cpp_method #foreign libskia "_ZNK7SkImage9colorTypeEv";
-
-    /** Returns SkColorSpace, the range of colors, associated with SkImage.  The
-    reference count of SkColorSpace is unchanged. The returned SkColorSpace is
-    immutable.
-    
-    SkColorSpace returned was passed to an SkImage constructor,
-    or was parsed from encoded data. SkColorSpace returned may be ignored when SkImage
-    is drawn, depending on the capabilities of the SkSurface receiving the drawing.
-    
-    @return  SkColorSpace in SkImage, or nullptr
-    
-    example: https://fiddle.skia.org/c/@Image_colorSpace
-    */
-    colorSpace :: (this: *SkImage) -> *SkColorSpace #cpp_method #foreign libskia "_ZNK7SkImage10colorSpaceEv";
-
-    /** Returns a smart pointer to SkColorSpace, the range of colors, associated with
-    SkImage.  The smart pointer tracks the number of objects sharing this
-    SkColorSpace reference so the memory is released when the owners destruct.
-    
-    The returned SkColorSpace is immutable.
-    
-    SkColorSpace returned was passed to an SkImage constructor,
-    or was parsed from encoded data. SkColorSpace returned may be ignored when SkImage
-    is drawn, depending on the capabilities of the SkSurface receiving the drawing.
-    
-    @return  SkColorSpace in SkImage, or nullptr, wrapped in a smart pointer
-    
-    example: https://fiddle.skia.org/c/@Image_refColorSpace
-    */
-    refColorSpace :: (this: *SkImage) -> sk_sp(SkColorSpace) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13refColorSpaceEv";
-
-    /** Returns true if SkImage pixels represent transparency only. If true, each pixel
-    is packed in 8 bits as defined by kAlpha_8_SkColorType.
-    
-    @return  true if pixels represent a transparency mask
-    
-    example: https://fiddle.skia.org/c/@Image_isAlphaOnly
-    */
-    isAlphaOnly :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage11isAlphaOnlyEv";
-
-    /** Returns true if pixels ignore their alpha value and are treated as fully opaque.
-    
-    @return  true if SkAlphaType is kOpaque_SkAlphaType
-    */
-//     isOpaque :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage8isOpaqueEv";
-
-    /**
-    *  Make a shader with the specified tiling and mipmap sampling.
-    */
-    makeShader :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: /*const reference*/ *SkSamplingOptions, localMatrix: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderE10SkTileModeS0_RK17SkSamplingOptionsPK8SkMatrix";
-    makeShader :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: SkSamplingOptions, localMatrix: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
-        return makeShader(this, tmx, tmy, *unknown0, localMatrix);
-    }
-
-    makeShader_1 :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderE10SkTileModeS0_RK17SkSamplingOptionsRK8SkMatrix";
-    makeShader_1 :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
-        return makeShader_1(this, tmx, tmy, *sampling, *lm);
-    }
-
-    /** Defaults to clamp in both X and Y. */
-    makeShader :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderERK17SkSamplingOptionsRK8SkMatrix";
-    makeShader :: (this: *SkImage, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
-        return makeShader(this, *sampling, *lm);
-    }
-    makeShader_1 :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderERK17SkSamplingOptionsPK8SkMatrix";
-    makeShader_1 :: (this: *SkImage, sampling: SkSamplingOptions, lm: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
-        return makeShader_1(this, *sampling, lm);
-    }
-
-    /**
-    *  makeRawShader functions like makeShader, but for images that contain non-color data.
-    *  This includes images encoding things like normals, material properties (eg, roughness),
-    *  heightmaps, or any other purely mathematical data that happens to be stored in an image.
-    *  These types of images are useful with some programmable shaders (see: SkRuntimeEffect).
-    *
-    *  Raw image shaders work like regular image shaders (including filtering and tiling), with
-    *  a few major differences:
-    *    - No color space transformation is ever applied (the color space of the image is ignored).
-    *    - Images with an alpha type of kUnpremul are *not* automatically premultiplied.
-    *    - Bicubic filtering is not supported. If SkSamplingOptions::useCubic is true, these
-    *      factories will return nullptr.
-    */
-    makeRawShader :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: /*const reference*/ *SkSamplingOptions, localMatrix: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderE10SkTileModeS0_RK17SkSamplingOptionsPK8SkMatrix";
-    makeRawShader :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: SkSamplingOptions, localMatrix: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
-        return makeRawShader(this, tmx, tmy, *unknown0, localMatrix);
-    }
-
-    makeRawShader_1 :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderE10SkTileModeS0_RK17SkSamplingOptionsRK8SkMatrix";
-    makeRawShader_1 :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
-        return makeRawShader_1(this, tmx, tmy, *sampling, *lm);
-    }
-
-    /** Defaults to clamp in both X and Y. */
-    makeRawShader :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderERK17SkSamplingOptionsRK8SkMatrix";
-    makeRawShader :: (this: *SkImage, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
-        return makeRawShader(this, *sampling, *lm);
-    }
-    makeRawShader_1 :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderERK17SkSamplingOptionsPK8SkMatrix";
-    makeRawShader_1 :: (this: *SkImage, sampling: SkSamplingOptions, lm: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
-        return makeRawShader_1(this, *sampling, lm);
-    }
-
-    /** Copies SkImage pixel address, row bytes, and SkImageInfo to pixmap, if address
-    is available, and returns true. If pixel address is not available, return
-    false and leave pixmap unchanged.
-    
-    @param pixmap  storage for pixel state if pixels are readable; otherwise, ignored
-    @return        true if SkImage has direct access to pixels
-    
-    example: https://fiddle.skia.org/c/@Image_peekPixels
-    */
-    peekPixels :: (this: *SkImage, pixmap: *SkPixmap) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10peekPixelsEP8SkPixmap";
-
-    /** \enum SkImage::CachingHint
-    CachingHint selects whether Skia may internally cache SkBitmap generated by
-    decoding SkImage, or by copying SkImage from GPU to CPU. The default behavior
-    allows caching SkBitmap.
-    
-    Choose kDisallow_CachingHint if SkImage pixels are to be used only once, or
-    if SkImage pixels reside in a cache outside of Skia, or to reduce memory pressure.
-    
-    Choosing kAllow_CachingHint does not ensure that pixels will be cached.
-    SkImage pixels may not be cached if memory requirements are too large or
-    pixels are not accessible.
-    */
-    CachingHint :: enum u32 {
-        Allow_CachingHint    :: 0;
-        Disallow_CachingHint :: 1;
-
-        kAllow_CachingHint    :: Allow_CachingHint;
-        kDisallow_CachingHint :: Disallow_CachingHint;
-    }
-
-    /** Copies SkRect of pixels from SkImage to dstPixels. Copy starts at offset (srcX, srcY),
-    and does not exceed SkImage (width(), height()).
-    
-    Graphite has deprecated this API in favor of the equivalent asynchronous API on
-    skgpu::graphite::Context (with an optional explicit synchonization).
-    
-    dstInfo specifies width, height, SkColorType, SkAlphaType, and SkColorSpace of
-    destination. dstRowBytes specifies the gap from one destination row to the next.
-    Returns true if pixels are copied. Returns false if:
-    - dstInfo.addr() equals nullptr
-    - dstRowBytes is less than dstInfo.minRowBytes()
-    - SkPixelRef is nullptr
-    
-    Pixels are copied only if pixel conversion is possible. If SkImage SkColorType is
-    kGray_8_SkColorType, or kAlpha_8_SkColorType; dstInfo.colorType() must match.
-    If SkImage SkColorType is kGray_8_SkColorType, dstInfo.colorSpace() must match.
-    If SkImage SkAlphaType is kOpaque_SkAlphaType, dstInfo.alphaType() must
-    match. If SkImage SkColorSpace is nullptr, dstInfo.colorSpace() must match. Returns
-    false if pixel conversion is not possible.
-    
-    srcX and srcY may be negative to copy only top or left of source. Returns
-    false if width() or height() is zero or negative.
-    Returns false if abs(srcX) >= Image width(), or if abs(srcY) >= Image height().
-    
-    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
-    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
-    
-    @param context      the GrDirectContext in play, if it exists
-    @param dstInfo      destination width, height, SkColorType, SkAlphaType, SkColorSpace
-    @param dstPixels    destination pixel storage
-    @param dstRowBytes  destination row length
-    @param srcX         column index whose absolute value is less than width()
-    @param srcY         row index whose absolute value is less than height()
-    @param cachingHint  whether the pixels should be cached locally
-    @return             true if pixels are copied to dstPixels
-    */
-    readPixels :: (this: *SkImage, _context: *GrDirectContext, dstInfo: *SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsEP15GrDirectContextRK11SkImageInfoPvmiiNS_11CachingHintE";
-    readPixels :: (this: *SkImage, _context: *GrDirectContext, dstInfo: SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
-        return readPixels(this, _context, *dstInfo, dstPixels, dstRowBytes, srcX, srcY, cachingHint);
-    }
-
-    /** Copies a SkRect of pixels from SkImage to dst. Copy starts at (srcX, srcY), and
-    does not exceed SkImage (width(), height()).
-    
-    Graphite has deprecated this API in favor of the equivalent asynchronous API on
-    skgpu::graphite::Context (with an optional explicit synchonization).
-    
-    dst specifies width, height, SkColorType, SkAlphaType, SkColorSpace, pixel storage,
-    and row bytes of destination. dst.rowBytes() specifics the gap from one destination
-    row to the next. Returns true if pixels are copied. Returns false if:
-    - dst pixel storage equals nullptr
-    - dst.rowBytes is less than SkImageInfo::minRowBytes
-    - SkPixelRef is nullptr
-    
-    Pixels are copied only if pixel conversion is possible. If SkImage SkColorType is
-    kGray_8_SkColorType, or kAlpha_8_SkColorType; dst.colorType() must match.
-    If SkImage SkColorType is kGray_8_SkColorType, dst.colorSpace() must match.
-    If SkImage SkAlphaType is kOpaque_SkAlphaType, dst.alphaType() must
-    match. If SkImage SkColorSpace is nullptr, dst.colorSpace() must match. Returns
-    false if pixel conversion is not possible.
-    
-    srcX and srcY may be negative to copy only top or left of source. Returns
-    false if width() or height() is zero or negative.
-    Returns false if abs(srcX) >= Image width(), or if abs(srcY) >= Image height().
-    
-    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
-    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
-    
-    @param context      the GrDirectContext in play, if it exists
-    @param dst          destination SkPixmap: SkImageInfo, pixels, row bytes
-    @param srcX         column index whose absolute value is less than width()
-    @param srcY         row index whose absolute value is less than height()
-    @param cachingHint  whether the pixels should be cached locallyZ
-    @return             true if pixels are copied to dst
-    */
-    readPixels :: (this: *SkImage, _context: *GrDirectContext, dst: *SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsEP15GrDirectContextRK8SkPixmapiiNS_11CachingHintE";
-    readPixels :: (this: *SkImage, _context: *GrDirectContext, dst: SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
-        return readPixels(this, _context, *dst, srcX, srcY, cachingHint);
-    }
-
-    /** Deprecated. Use the variants that accept a GrDirectContext. */
-    readPixels :: (this: *SkImage, dstInfo: *SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsERK11SkImageInfoPvmiiNS_11CachingHintE";
-    readPixels :: (this: *SkImage, dstInfo: SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
-        return readPixels(this, *dstInfo, dstPixels, dstRowBytes, srcX, srcY, cachingHint);
-    }
-
-    readPixels :: (this: *SkImage, dst: *SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsERK8SkPixmapiiNS_11CachingHintE";
-    readPixels :: (this: *SkImage, dst: SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
-        return readPixels(this, *dst, srcX, srcY, cachingHint);
-    }
-
-    /** The result from asyncRescaleAndReadPixels() or asyncRescaleAndReadPixelsYUV420(). */
-    AsyncReadResult :: struct {
-        vtable: *AsyncReadResult_VTable;
-
-//         CopyConstructor :: (this: *AsyncReadResult, unknown0: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultC2ERKS0_";
-        CopyConstructor :: (this: *AsyncReadResult, unknown0: AsyncReadResult) #no_context {
-            CopyConstructor(this, *unknown0);
-        }
-
-//         Destructor_Base :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultD2Ev";
-
-//         Constructor :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultC2Ev";
-
-        // Virtual functions:
-        // Normally you should call them via the vtable.
-        // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
-        // or need to create a vtable yourself.
-
-//         virtual_Destructor :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultD1Ev";
-//         virtual_Destructor_Deleting :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultD0Ev";
-
-        /** Returns how many planes of data are in the result. e.g. 3 for YUV data. */
-//         virtual_count :: (this: *AsyncReadResult) -> s32 #cpp_method #foreign libskia "_ZNK7SkImage15AsyncReadResult5countEv";
-
-        /** Returns the raw pixel data for a given plane.
-        *
-        * It will be organized as per the dst SkImageInfo passed in to the async read call.
-        *
-        * Clients may wish to create an SkPixmap with this data using the dst SkImageInfo
-        * and rowBytes(i).
-        */
-//         virtual_data :: (this: *AsyncReadResult, i: s32) -> *void #cpp_method #foreign libskia "_ZNK7SkImage15AsyncReadResult4dataEi";
-
-        /** Returns how many bytes correspond to a single row of image data */
-//         virtual_rowBytes :: (this: *AsyncReadResult, i: s32) -> u64 #cpp_method #foreign libskia "_ZNK7SkImage15AsyncReadResult8rowBytesEi";
-    }
-    AsyncReadResult_VTable :: struct #type_info_none {
-        Destructor:          #type (this: *SkImage.AsyncReadResult) -> void #cpp_method;
-        Destructor_Deleting: #type (this: *SkImage.AsyncReadResult) -> void #cpp_method;
-
-        count:               #type (this: *SkImage.AsyncReadResult) -> s32 #cpp_method;
-
-        data:                #type (this: *SkImage.AsyncReadResult, i: s32) -> *void #cpp_method;
-
-        rowBytes:            #type (this: *SkImage.AsyncReadResult, i: s32) -> u64 #cpp_method;
-    }
-    AsyncReadResult_Destructor :: inline (this: *AsyncReadResult) { this.vtable.Destructor(this); }
-    AsyncReadResult_Destructor_Deleting :: inline (this: *AsyncReadResult) { this.vtable.Destructor_Deleting(this); }
-
-    AsyncReadResult_count :: inline (this: *AsyncReadResult) -> s32 { return this.vtable.count(this); }
-
-    AsyncReadResult_data :: inline (this: *AsyncReadResult, i: s32) -> *void { return this.vtable.data(this, i); }
-
-    AsyncReadResult_rowBytes :: inline (this: *AsyncReadResult, i: s32) -> u64 { return this.vtable.rowBytes(this, i); }
-
-    get_vtable :: (obj: *AsyncReadResult) -> *AsyncReadResult_VTable { return obj.vtable; }
-
-
-//     operator_assign :: (this: *SkImage.AsyncReadResult, unknown0: *SkImage.AsyncReadResult) -> *SkImage.AsyncReadResult #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultaSERKS0_";
-    operator_assign :: (this: *SkImage.AsyncReadResult, unknown0: SkImage.AsyncReadResult) -> *SkImage.AsyncReadResult #no_context {
-        return operator_assign(this, *unknown0);
-    }
-
-    /** Client-provided context that is passed to client-provided ReadPixelsContext. */
-    ReadPixelsContext :: *void;
-
-    /**  Client-provided callback to asyncRescaleAndReadPixels() or
-    asyncRescaleAndReadPixelsYUV420() that is called when read result is ready or on failure.
-    */
-    ReadPixelsCallback :: #type (unknown0: ReadPixelsContext, unknown1: std.unique_ptr(AsyncReadResult)) -> void #c_call;
-
-    RescaleGamma :: enum u8 {
-        Src    :: 0;
-        Linear :: 1;
-        kSrc    :: Src;
-        kLinear :: Linear;
-    }
-
-    RescaleMode :: enum s32 {
-        Nearest        :: 0;
-        Linear         :: 1;
-        RepeatedLinear :: 2;
-        RepeatedCubic  :: 3;
-
-        kNearest        :: Nearest;
-        kLinear         :: Linear;
-        kRepeatedLinear :: RepeatedLinear;
-        kRepeatedCubic  :: RepeatedCubic;
-    }
-
-    /** Makes image pixel data available to caller, possibly asynchronously. It can also rescale
-    the image pixels.
-    
-    Currently asynchronous reads are only supported in the Ganesh GPU backend and only when the
-    underlying 3D API supports transfer buffers and CPU/GPU synchronization primitives. In all
-    other cases this operates synchronously.
-    
-    For the Graphite backend this API has been deprecated in favor of the equivalent API
-    on skgpu::graphite::Context.
-    
-    Data is read from the source sub-rectangle, is optionally converted to a linear gamma, is
-    rescaled to the size indicated by 'info', is then converted to the color space, color type,
-    and alpha type of 'info'. A 'srcRect' that is not contained by the bounds of the image
-    causes failure.
-    
-    When the pixel data is ready the caller's ReadPixelsCallback is called with a
-    AsyncReadResult containing pixel data in the requested color type, alpha type, and color
-    space. The AsyncReadResult will have count() == 1. Upon failure the callback is called with
-    nullptr for AsyncReadResult. For a GPU image this flushes work but a submit must occur to
-    guarantee a finite time before the callback is called.
-    
-    The data is valid for the lifetime of AsyncReadResult with the exception that if the SkImage
-    is GPU-backed the data is immediately invalidated if the context is abandoned or
-    destroyed.
-    
-    @param info            info of the requested pixels
-    @param srcRect         subrectangle of image to read
-    @param rescaleGamma    controls whether rescaling is done in the image's gamma or whether
-    the source data is transformed to a linear gamma before rescaling.
-    @param rescaleMode     controls the technique (and cost) of the rescaling
-    @param callback        function to call with result of the read
-    @param context         passed to callback
-    */
-    asyncRescaleAndReadPixels :: (this: *SkImage, info: *SkImageInfo, srcRect: *SkIRect, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) -> void #cpp_method #foreign libskia "_ZNK7SkImage25asyncRescaleAndReadPixelsERK11SkImageInfoRK7SkIRectNS_12RescaleGammaENS_11RescaleModeEPFvPvSt10unique_ptrIKNS_15AsyncReadResultESt14default_deleteISB_EEES8_";
-    asyncRescaleAndReadPixels :: (this: *SkImage, info: SkImageInfo, srcRect: SkIRect, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) #no_context {
-        asyncRescaleAndReadPixels(this, *info, *srcRect, rescaleGamma, rescaleMode, callback, _context);
-    }
-
-    /**
-    Similar to asyncRescaleAndReadPixels but performs an additional conversion to YUV. The
-    RGB->YUV conversion is controlled by 'yuvColorSpace'. The YUV data is returned as three
-    planes ordered y, u, v. The u and v planes are half the width and height of the resized
-    rectangle. The y, u, and v values are single bytes. Currently this fails if 'dstSize'
-    width and height are not even. A 'srcRect' that is not contained by the bounds of the
-    image causes failure.
-    
-    When the pixel data is ready the caller's ReadPixelsCallback is called with a
-    AsyncReadResult containing the planar data. The AsyncReadResult will have count() == 3.
-    Upon failure the callback is called with nullptr for AsyncReadResult. For a GPU image this
-    flushes work but a submit must occur to guarantee a finite time before the callback is
-    called.
-    
-    The data is valid for the lifetime of AsyncReadResult with the exception that if the SkImage
-    is GPU-backed the data is immediately invalidated if the context is abandoned or
-    destroyed.
-    
-    @param yuvColorSpace  The transformation from RGB to YUV. Applied to the resized image
-    after it is converted to dstColorSpace.
-    @param dstColorSpace  The color space to convert the resized image to, after rescaling.
-    @param srcRect        The portion of the image to rescale and convert to YUV planes.
-    @param dstSize        The size to rescale srcRect to
-    @param rescaleGamma   controls whether rescaling is done in the image's gamma or whether
-    the source data is transformed to a linear gamma before rescaling.
-    @param rescaleMode    controls the technique (and cost) of the rescaling
-    @param callback       function to call with the planar read result
-    @param context        passed to callback
-    */
-    asyncRescaleAndReadPixelsYUV420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: *SkIRect, dstSize: *SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) -> void #cpp_method #foreign libskia "_ZNK7SkImage31asyncRescaleAndReadPixelsYUV420E15SkYUVColorSpace5sk_spI12SkColorSpaceERK7SkIRectRK7SkISizeNS_12RescaleGammaENS_11RescaleModeEPFvPvSt10unique_ptrIKNS_15AsyncReadResultESt14default_deleteISF_EEESC_";
-    asyncRescaleAndReadPixelsYUV420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: SkIRect, dstSize: SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) #no_context {
-        asyncRescaleAndReadPixelsYUV420(this, yuvColorSpace, dstColorSpace, *srcRect, *dstSize, rescaleGamma, rescaleMode, callback, _context);
-    }
-
-    /**
-    * Identical to asyncRescaleAndReadPixelsYUV420 but a fourth plane is returned in the
-    * AsyncReadResult passed to 'callback'. The fourth plane contains the alpha chanel at the
-    * same full resolution as the Y plane.
-    */
-    asyncRescaleAndReadPixelsYUVA420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: *SkIRect, dstSize: *SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) -> void #cpp_method #foreign libskia "_ZNK7SkImage32asyncRescaleAndReadPixelsYUVA420E15SkYUVColorSpace5sk_spI12SkColorSpaceERK7SkIRectRK7SkISizeNS_12RescaleGammaENS_11RescaleModeEPFvPvSt10unique_ptrIKNS_15AsyncReadResultESt14default_deleteISF_EEESC_";
-    asyncRescaleAndReadPixelsYUVA420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: SkIRect, dstSize: SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) #no_context {
-        asyncRescaleAndReadPixelsYUVA420(this, yuvColorSpace, dstColorSpace, *srcRect, *dstSize, rescaleGamma, rescaleMode, callback, _context);
-    }
-
-    /** Copies SkImage to dst, scaling pixels to fit dst.width() and dst.height(), and
-    converting pixels to match dst.colorType() and dst.alphaType(). Returns true if
-    pixels are copied. Returns false if dst.addr() is nullptr, or dst.rowBytes() is
-    less than dst SkImageInfo::minRowBytes.
-    
-    Pixels are copied only if pixel conversion is possible. If SkImage SkColorType is
-    kGray_8_SkColorType, or kAlpha_8_SkColorType; dst.colorType() must match.
-    If SkImage SkColorType is kGray_8_SkColorType, dst.colorSpace() must match.
-    If SkImage SkAlphaType is kOpaque_SkAlphaType, dst.alphaType() must
-    match. If SkImage SkColorSpace is nullptr, dst.colorSpace() must match. Returns
-    false if pixel conversion is not possible.
-    
-    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
-    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
-    
-    @param dst            destination SkPixmap: SkImageInfo, pixels, row bytes
-    @return               true if pixels are scaled to fit dst
-    */
-    scalePixels :: (this: *SkImage, dst: *SkPixmap, unknown0: *SkSamplingOptions, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage11scalePixelsERK8SkPixmapRK17SkSamplingOptionsNS_11CachingHintE";
-    scalePixels :: (this: *SkImage, dst: SkPixmap, unknown0: SkSamplingOptions, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
-        return scalePixels(this, *dst, *unknown0, cachingHint);
-    }
-
-    /**
-    * Create a new image by copying this image and scaling to fit the ImageInfo's dimensions
-    * and converting the pixels into the ImageInfo's ColorInfo.
-    * This is done retaining the domain (backend) of the image (e.g. gpu, raster)
-    *
-    * The Recorder parameter is required if the original image was created on a graphite Recorder,
-    * but must be nullptr if it was create in some other way (e.g. GrContext, raster, deferred).
-    *
-    * return nullptr if the requested ColorInfo is not supported, its dimesions are out of range,
-    *  or if the recorder is null on a graphite Image.
-    */
-    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: *SkImageInfo, unknown2: *SkSamplingOptions) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeScaledEP10SkRecorderRK11SkImageInfoRK17SkSamplingOptions";
-    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: SkImageInfo, unknown2: SkSamplingOptions) -> sk_sp(SkImage) #no_context {
-        return makeScaled(this, unknown0, *unknown1, *unknown2);
-    }
-    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: *SkImageInfo, unknown2: *SkSamplingOptions, unknown3: *SkSurfaceProps) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeScaledEP10SkRecorderRK11SkImageInfoRK17SkSamplingOptionsRK14SkSurfaceProps";
-    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: SkImageInfo, unknown2: SkSamplingOptions, unknown3: SkSurfaceProps) -> sk_sp(SkImage) #no_context {
-        return makeScaled(this, unknown0, *unknown1, *unknown2, *unknown3);
-    }
-
-    makeScaled :: (this: *SkImage, info: *SkImageInfo, sampling: *SkSamplingOptions) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeScaledERK11SkImageInfoRK17SkSamplingOptions";
-    makeScaled :: (this: *SkImage, info: SkImageInfo, sampling: SkSamplingOptions) -> sk_sp(SkImage) #no_context {
-        return makeScaled(this, *info, *sampling);
-    }
-
-    refEncodedData :: (this: *SkImage) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage14refEncodedDataEv";
-
-    RequiredProperties :: struct {
-        fMipmapped  := false;
-    }
-
-//     operator_eq :: (this: *SkImage.RequiredProperties, other: *SkImage.RequiredProperties) -> bool #cpp_method #foreign libskia "_ZNK7SkImage18RequiredPropertieseqERKS0_";
-    operator_eq :: (this: SkImage.RequiredProperties, other: SkImage.RequiredProperties) -> bool #no_context {
-        return operator_eq(*this, *other);
-    }
-
-//     operator_neq :: (this: *SkImage.RequiredProperties, other: *SkImage.RequiredProperties) -> bool #cpp_method #foreign libskia "_ZNK7SkImage18RequiredPropertiesneERKS0_";
-    operator_neq :: (this: SkImage.RequiredProperties, other: SkImage.RequiredProperties) -> bool #no_context {
-        return operator_neq(*this, *other);
-    }
-
-//     operator_less :: (this: *SkImage.RequiredProperties, other: *SkImage.RequiredProperties) -> bool #cpp_method #foreign libskia "_ZNK7SkImage18RequiredPropertiesltERKS0_";
-    operator_less :: (this: SkImage.RequiredProperties, other: SkImage.RequiredProperties) -> bool #no_context {
-        return operator_less(*this, *other);
-    }
-
-    /**
-    *  Returns true if the image has mipmap levels.
-    */
-    hasMipmaps :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10hasMipmapsEv";
-
-    /**
-    *  Returns true if the image holds protected content.
-    */
-    isProtected :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage11isProtectedEv";
-
-    /**
-    *  Returns an image with the same "base" pixels as the this image, but with mipmap levels
-    *  automatically generated and attached.
-    */
-    withDefaultMipmaps :: (this: *SkImage) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage18withDefaultMipmapsEv";
-
-    /** Returns raster image or lazy image. Copies SkImage backed by GPU texture into
-    CPU memory if needed. Returns original SkImage if decoded in raster bitmap,
-    or if encoded in a stream.
-    
-    Returns nullptr if backed by GPU texture and copy fails.
-    
-    @return  raster image, lazy image, or nullptr
-    
-    example: https://fiddle.skia.org/c/@Image_makeNonTextureImage
-    */
-    makeNonTextureImage :: (this: *SkImage, unknown0: *GrDirectContext = null) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage19makeNonTextureImageEP15GrDirectContext";
-
-    /** Returns raster image. Copies SkImage backed by GPU texture into CPU memory,
-    or decodes SkImage from lazy image. Returns original SkImage if decoded in
-    raster bitmap.
-    
-    Returns nullptr if copy, decode, or pixel read fails.
-    
-    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
-    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
-    
-    @return  raster image, or nullptr
-    
-    example: https://fiddle.skia.org/c/@Image_makeRasterImage
-    */
-    makeRasterImage :: (this: *SkImage, unknown0: *GrDirectContext, cachingHint: SkImage.CachingHint = .Disallow_CachingHint) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage15makeRasterImageEP15GrDirectContextNS_11CachingHintE";
-
-//     makeRasterImage :: (this: *SkImage, cachingHint: SkImage.CachingHint = .Disallow_CachingHint) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage15makeRasterImageENS_11CachingHintE";
-
-    /** Deprecated.
-    */
-    LegacyBitmapMode :: enum u32 {
-        kRO_LegacyBitmapMode :: 0;
-    }
-
-    /** Deprecated.
-    Creates raster SkBitmap with same pixels as SkImage. If legacyBitmapMode is
-    kRO_LegacyBitmapMode, returned bitmap is read-only and immutable.
-    Returns true if SkBitmap is stored in bitmap. Returns false and resets bitmap if
-    SkBitmap write did not succeed.
-    
-    @param bitmap            storage for legacy SkBitmap
-    @param legacyBitmapMode  bitmap is read-only and immutable
-    @return                  true if SkBitmap was created
-    */
-    asLegacyBitmap :: (this: *SkImage, bitmap: *SkBitmap, legacyBitmapMode: SkImage.LegacyBitmapMode = .kRO_LegacyBitmapMode) -> bool #cpp_method #foreign libskia "_ZNK7SkImage14asLegacyBitmapEP8SkBitmapNS_16LegacyBitmapModeE";
-
-    /** Creates a new SkImage identical to this one, but with a different SkColorSpace.
-    This does not convert the underlying pixel data, so the resulting image will draw
-    differently.
-    */
-    reinterpretColorSpace :: (this: *SkImage, newColorSpace: sk_sp(SkColorSpace)) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage21reinterpretColorSpaceE5sk_spI12SkColorSpaceE";
-
-    Constructor :: (this: *SkImage, info: *SkImageInfo, uniqueID: u32) -> void #cpp_method #foreign libskia "_ZN7SkImageC2ERK11SkImageInfoj";
-    Constructor :: (this: *SkImage, info: SkImageInfo, uniqueID: u32) #no_context {
-        Constructor(this, *info, uniqueID);
-    }
-
-    fInfo:               SkImageInfo;
-
-    withMipmaps :: (this: *SkImage, unknown0: sk_sp(SkMipmap)) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage11withMipmapsE5sk_spI8SkMipmapE";
-
-    INHERITED :: SkRefCnt;
-
-    // Virtual functions:
-    // Normally you should call them via the vtable.
-    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
-    // or need to create a vtable yourself.
-
-    /** Returns true if the contents of SkImage was created on or uploaded to GPU memory,
-    and is available as a GPU texture.
-    
-    @return  true if SkImage is a GPU texture
-    
-    example: https://fiddle.skia.org/c/@Image_isTextureBacked
-    */
-//     virtual_isTextureBacked :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage15isTextureBackedEv";
-
-    /** Returns an approximation of the amount of texture memory used by the image. Returns
-    zero if the image is not texture backed or if the texture has an external format.
-    */
-//     virtual_textureSize :: (this: *SkImage) -> u64 #cpp_method #foreign libskia "_ZNK7SkImage11textureSizeEv";
-
-    /** Returns true if SkImage can be drawn on either raster surface or GPU surface.
-    If recorder is nullptr, tests if SkImage draws on raster surface;
-    otherwise, tests if SkImage draws on the associated GPU surface.
-    
-    SkImage backed by GPU texture may become invalid if associated context is
-    invalid. lazy image may be invalid and may not draw to raster surface or
-    GPU surface or both.
-    
-    @param context  GPU context
-    @return         true if SkImage can be drawn
-    
-    example: https://fiddle.skia.org/c/@Image_isValid
-    */
-//     virtual_isValid :: (this: *SkImage, unknown0: *SkRecorder) -> bool #cpp_method #foreign libskia "_ZNK7SkImage7isValidEP10SkRecorder";
-
-    /** Returns subset of this image.
-    
-    Returns nullptr if any of the following are true:
-    - Subset is empty
-    - Subset is not contained inside the image's bounds
-    - Pixels in the image could not be read or copied
-    - This image is texture-backed and the provided context is null or does not match
-    the source image's context.
-    
-    If the source image was texture-backed, the resulting image will be texture-backed also.
-    Otherwise, the returned image will be raster-backed.
-    
-    @param recorder            the recorder of the source image (nullptr is ok if the
-    source image was texture-backed).
-    @param subset              bounds of returned SkImage
-    @param RequiredProperties  properties the returned SkImage must possess (e.g. mipmaps)
-    @return                    the subsetted image, or nullptr
-    */
-//     virtual_makeSubset :: (this: *SkImage, unknown0: *SkRecorder, subset: *SkIRect, unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeSubsetEP10SkRecorderRK7SkIRectNS_18RequiredPropertiesE";
-
-    /** Returns true if SkImage is backed by an image-generator or other service that creates
-    and caches its pixels or texture on-demand.
-    
-    @return  true if SkImage is created as needed
-    
-    example: https://fiddle.skia.org/c/@Image_isLazyGenerated_a
-    example: https://fiddle.skia.org/c/@Image_isLazyGenerated_b
-    */
-//     virtual_isLazyGenerated :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage15isLazyGeneratedEv";
-
-    /** Creates SkImage in target SkColorSpace.
-    Returns nullptr if SkImage could not be created.
-    
-    Returns original SkImage if it is in target SkColorSpace.
-    Otherwise, converts pixels from SkImage SkColorSpace to target SkColorSpace.
-    If SkImage colorSpace() returns nullptr, SkImage SkColorSpace is assumed to be sRGB.
-    
-    If this image is graphite-backed, the recorder parameter is required.
-    
-    @param targetColorSpace    SkColorSpace describing color range of returned SkImage
-    @param recorder            The Recorder in which to create the new image
-    @param RequiredProperties  properties the returned SkImage must possess (e.g. mipmaps)
-    @return                    created SkImage in target SkColorSpace
-    */
-//     virtual_makeColorSpace :: (this: *SkImage, unknown0: *SkRecorder, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage14makeColorSpaceEP10SkRecorder5sk_spI12SkColorSpaceENS_18RequiredPropertiesE";
-
-    /** Experimental.
-    Creates SkImage in target SkColorType and SkColorSpace.
-    Returns nullptr if SkImage could not be created.
-    
-    Returns original SkImage if it is in target SkColorType and SkColorSpace.
-    
-    If this image is graphite-backed, the recorder parameter is required.
-    
-    @param targetColorType     SkColorType of returned SkImage
-    @param targetColorSpace    SkColorSpace of returned SkImage
-    @param recorder            The Recorder in which to create the new image
-    @param RequiredProperties  properties the returned SkImage must possess (e.g. mipmaps)
-    @return                    created SkImage in target SkColorType and SkColorSpace
-    */
-//     virtual_makeColorTypeAndColorSpace :: (this: *SkImage, unknown0: *SkRecorder, targetColorType: SkColorType, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage26makeColorTypeAndColorSpaceEP10SkRecorder11SkColorType5sk_spI12SkColorSpaceENS_18RequiredPropertiesE";
-}
-SkImage_VTable :: struct #type_info_none {
-    using vtable:               SkRefCntBase_VTable;
-
-    isTextureBacked:            #type (this: *SkImage) -> bool #cpp_method;
-
-    textureSize:                #type (this: *SkImage) -> u64 #cpp_method;
-
-    isValid:                    #type (this: *SkImage, unknown0: *SkRecorder) -> bool #cpp_method;
-
-    makeSubset:                 #type (this: *SkImage, unknown0: *SkRecorder, subset: *SkIRect, unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod;
-
-    isLazyGenerated:            #type (this: *SkImage) -> bool #cpp_method;
-
-    makeColorSpace:             #type (this: *SkImage, unknown0: *SkRecorder, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod;
-
-    makeColorTypeAndColorSpace: #type (this: *SkImage, unknown0: *SkRecorder, targetColorType: SkColorType, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod;
-}
-SkImage_isTextureBacked :: inline (this: *SkImage) -> bool { return this.vtable.isTextureBacked(this); }
-
-SkImage_textureSize :: inline (this: *SkImage) -> u64 { return this.vtable.textureSize(this); }
-
-SkImage_isValid :: inline (this: *SkImage, unknown0: *SkRecorder) -> bool { return this.vtable.isValid(this, unknown0); }
-
-SkImage_makeSubset :: inline (this: *SkImage, unknown0: *SkRecorder, subset: *SkIRect, unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) { return this.vtable.makeSubset(this, unknown0, subset, unknown1); }
-
-SkImage_isLazyGenerated :: inline (this: *SkImage) -> bool { return this.vtable.isLazyGenerated(this); }
-
-SkImage_makeColorSpace :: inline (this: *SkImage, unknown0: *SkRecorder, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) { return this.vtable.makeColorSpace(this, unknown0, targetColorSpace, unknown1); }
-
-SkImage_makeColorTypeAndColorSpace :: inline (this: *SkImage, unknown0: *SkRecorder, targetColorType: SkColorType, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) { return this.vtable.makeColorTypeAndColorSpace(this, unknown0, targetColorType, targetColorSpace, unknown1); }
-
-get_vtable :: (obj: *SkImage) -> *SkImage_VTable { return obj.vtable; }
-
-
 SkPathIter :: struct {
     Rec :: struct {
         fPoints:      SkSpan(SkPoint);
@@ -13492,6 +12510,2642 @@ operator_assign :: (this: *SkPath, path: SkPath) -> *SkPath #no_context {
     return operator_assign(this, *path);
 }
 
+SkFourByteTag :: u32;
+
+// SkSetFourByteTag :: (a: u8, b: u8, c: u8, d: u8) -> SkFourByteTag #foreign libskia "_ZL16SkSetFourByteTagcccc";
+
+/** Represents a set of actual arguments for a font. */
+SkFontArguments :: struct {
+    VariationPosition :: struct {
+        Coordinate :: struct {
+            axis:  SkFourByteTag;
+            value: float;
+        }
+
+        coordinates:     *Coordinate;
+        coordinateCount: s32;
+    }
+
+    /** Specify a palette to use and overrides for palette entries.
+    *
+    *  `overrides` is a list of pairs of palette entry index and color.
+    *  The overriden palette entries will use the associated color.
+    *  Override pairs with palette entry indices out of range will not be applied.
+    *  Later override entries override earlier ones.
+    */
+    Palette :: struct {
+        Override :: struct {
+            index: u16;
+            color: SkColor;
+        }
+
+        index:         s32;
+        overrides:     *Override;
+        overrideCount: s32;
+    }
+
+//     Constructor :: (this: *SkFontArguments) -> void #cpp_method #foreign libskia "_ZN15SkFontArgumentsC1Ev";
+
+    /** Specify the index of the desired font.
+    *
+    *  Font formats like ttc, dfont, cff, cid, pfr, t42, t1, and fon may actually be indexed
+    *  collections of fonts.
+    */
+//     setCollectionIndex :: (this: *SkFontArguments, collectionIndex: s32) -> *SkFontArguments #cpp_method #foreign libskia "_ZN15SkFontArguments18setCollectionIndexEi";
+
+    /** Specify a position in the variation design space.
+    *
+    *  Any axis not specified will use the default value.
+    *  Any specified axis not actually present in the font will be ignored.
+    *
+    *  @param position not copied. The value must remain valid for life of SkFontArguments.
+    */
+//     setVariationDesignPosition :: (this: *SkFontArguments, position: VariationPosition) -> *SkFontArguments #cpp_method #foreign libskia "_ZN15SkFontArguments26setVariationDesignPositionENS_17VariationPositionE";
+
+//     getCollectionIndex :: (this: *SkFontArguments) -> s32 #cpp_method #foreign libskia "_ZNK15SkFontArguments18getCollectionIndexEv";
+
+//     getVariationDesignPosition :: (this: *SkFontArguments) -> VariationPosition #cpp_method #foreign libskia "_ZNK15SkFontArguments26getVariationDesignPositionEv";
+
+//     setPalette :: (this: *SkFontArguments, palette: Palette) -> *SkFontArguments #cpp_method #foreign libskia "_ZN15SkFontArguments10setPaletteENS_7PaletteE";
+
+//     getPalette :: (this: *SkFontArguments) -> Palette #cpp_method #foreign libskia "_ZNK15SkFontArguments10getPaletteEv";
+
+    fCollectionIndex:         s32;
+    fVariationDesignPosition: VariationPosition;
+    fPalette:                 Palette;
+}
+
+SkFontParameters :: struct {
+    using skfontparameters__raw: SkFontParameters__RAW;
+    __empty_struct_padding:      u8; // C++ makes empty structs have length 1
+}
+// SkFontParameters without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from SkFontParameters
+SkFontParameters__RAW :: struct {
+    Variation :: struct {
+        using variation__raw:   Variation__RAW;
+        __empty_struct_padding: u8; // C++ makes empty structs have length 1
+    }
+        // Variation without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from Variation
+    Variation__RAW :: struct {
+        // Parameters in a variation font axis.
+        Axis :: struct {
+//             Constructor :: (this: *Axis) -> void #cpp_method #foreign libskia "_ZN16SkFontParameters9Variation4AxisC1Ev";
+//             Constructor :: (this: *Axis, tag: SkFourByteTag, min: float, def: float, max: float, hidden: bool) -> void #cpp_method #foreign libskia "_ZN16SkFontParameters9Variation4AxisC1Ejfffb";
+
+            // Four character identifier of the font axis (weight, width, slant, italic...).
+            tag:    SkFourByteTag;
+
+            // Minimum value supported by this axis.
+            min:    float;
+
+            // Default value set by this axis.
+            def:    float;
+
+            // Maximum value supported by this axis. The maximum can equal the minimum.
+            max:    float;
+
+            // Return whether this axis is recommended to be remain hidden in user interfaces.
+//             isHidden :: (this: *Axis) -> bool #cpp_method #foreign libskia "_ZNK16SkFontParameters9Variation4Axis8isHiddenEv";
+
+            // Set this axis to be remain hidden in user interfaces.
+//             setHidden :: (this: *Axis, hidden: bool) -> void #cpp_method #foreign libskia "_ZN16SkFontParameters9Variation4Axis9setHiddenEb";
+
+            HIDDEN: u16 : 1;
+
+            // Attributes for a font axis.
+            flags:  u16;
+        }
+    }
+}
+
+SkFontStyle :: struct {
+    Weight :: enum u32 {
+        Invisible_Weight  :: 0;
+        Thin_Weight       :: 100;
+        ExtraLight_Weight :: 200;
+        Light_Weight      :: 300;
+        Normal_Weight     :: 400;
+        Medium_Weight     :: 500;
+        SemiBold_Weight   :: 600;
+        Bold_Weight       :: 700;
+        ExtraBold_Weight  :: 800;
+        Black_Weight      :: 900;
+        ExtraBlack_Weight :: 1000;
+
+        kInvisible_Weight  :: Invisible_Weight;
+        kThin_Weight       :: Thin_Weight;
+        kExtraLight_Weight :: ExtraLight_Weight;
+        kLight_Weight      :: Light_Weight;
+        kNormal_Weight     :: Normal_Weight;
+        kMedium_Weight     :: Medium_Weight;
+        kSemiBold_Weight   :: SemiBold_Weight;
+        kBold_Weight       :: Bold_Weight;
+        kExtraBold_Weight  :: ExtraBold_Weight;
+        kBlack_Weight      :: Black_Weight;
+        kExtraBlack_Weight :: ExtraBlack_Weight;
+    }
+
+    Width :: enum u32 {
+        UltraCondensed_Width :: 1;
+        ExtraCondensed_Width :: 2;
+        Condensed_Width      :: 3;
+        SemiCondensed_Width  :: 4;
+        Normal_Width         :: 5;
+        SemiExpanded_Width   :: 6;
+        Expanded_Width       :: 7;
+        ExtraExpanded_Width  :: 8;
+        UltraExpanded_Width  :: 9;
+
+        kUltraCondensed_Width :: UltraCondensed_Width;
+        kExtraCondensed_Width :: ExtraCondensed_Width;
+        kCondensed_Width      :: Condensed_Width;
+        kSemiCondensed_Width  :: SemiCondensed_Width;
+        kNormal_Width         :: Normal_Width;
+        kSemiExpanded_Width   :: SemiExpanded_Width;
+        kExpanded_Width       :: Expanded_Width;
+        kExtraExpanded_Width  :: ExtraExpanded_Width;
+        kUltraExpanded_Width  :: UltraExpanded_Width;
+    }
+
+    Slant :: enum u8 {
+        Upright_Slant :: 0;
+        Italic_Slant  :: 1;
+        Oblique_Slant :: 2;
+
+        kUpright_Slant :: Upright_Slant;
+        kItalic_Slant  :: Italic_Slant;
+        kOblique_Slant :: Oblique_Slant;
+    }
+
+//     Constructor :: (this: *SkFontStyle, weight: s32, width: s32, slant: Slant) -> void #cpp_method #foreign libskia "_ZN11SkFontStyleC1EiiNS_5SlantE";
+
+//     Constructor :: (this: *SkFontStyle) -> void #cpp_method #foreign libskia "_ZN11SkFontStyleC1Ev";
+
+//     weight :: (this: *SkFontStyle) -> s32 #cpp_method #foreign libskia "_ZNK11SkFontStyle6weightEv";
+//     width :: (this: *SkFontStyle) -> s32 #cpp_method #foreign libskia "_ZNK11SkFontStyle5widthEv";
+//     slant :: (this: *SkFontStyle) -> Slant #cpp_method #foreign libskia "_ZNK11SkFontStyle5slantEv";
+
+//     Normal :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle6NormalEv";
+
+//     Bold :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle4BoldEv";
+
+//     Italic :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle6ItalicEv";
+
+//     BoldItalic :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle10BoldItalicEv";
+
+    fValue: s32;
+}
+
+// operator_eq :: (this: *SkFontStyle, rhs: *SkFontStyle) -> bool #cpp_method #foreign libskia "_ZNK11SkFontStyleeqERKS_";
+operator_eq :: (this: SkFontStyle, rhs: SkFontStyle) -> bool #no_context {
+    return operator_eq(*this, *rhs);
+}
+
+/** \class SkWeakRefCnt
+
+SkWeakRefCnt is the base class for objects that may be shared by multiple
+objects. When an existing strong owner wants to share a reference, it calls
+ref(). When a strong owner wants to release its reference, it calls
+unref(). When the shared object's strong reference count goes to zero as
+the result of an unref() call, its (virtual) weak_dispose method is called.
+It is an error for the destructor to be called explicitly (or via the
+object going out of scope on the stack or calling delete) if
+getRefCnt() > 1.
+
+In addition to strong ownership, an owner may instead obtain a weak
+reference by calling weak_ref(). A call to weak_ref() must be balanced by a
+call to weak_unref(). To obtain a strong reference from a weak reference,
+call try_ref(). If try_ref() returns true, the owner's pointer is now also
+a strong reference on which unref() must be called. Note that this does not
+affect the original weak reference, weak_unref() must still be called. When
+the weak reference count goes to zero, the object is deleted. While the
+weak reference count is positive and the strong reference count is zero the
+object still exists, but will be in the disposed state. It is up to the
+object to define what this means.
+
+Note that a strong reference implicitly implies a weak reference. As a
+result, it is allowable for the owner of a strong ref to call try_ref().
+This will have the same effect as calling ref(), but may be more expensive.
+
+Example:
+
+SkWeakRefCnt myRef = strongRef.weak_ref();
+... // strongRef.unref() may or may not be called
+if (myRef.try_ref()) {
+... // use myRef
+myRef.unref();
+} else {
+// myRef is in the disposed state
+}
+myRef.weak_unref();
+*/
+SkWeakRefCnt :: struct {
+    vtable:                  *SkWeakRefCnt_VTable;
+    using skweakrefcnt__raw: SkWeakRefCnt__RAW;
+    #place vtable; #as skrefcnt: SkRefCnt; // Support cast to SkRefCnt
+}
+// SkWeakRefCnt without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkWeakRefCnt
+SkWeakRefCnt__RAW :: struct {
+    using skrefcnt__raw: SkRefCnt__RAW;
+
+    /** Default construct, initializing the reference counts to 1.
+    The strong references collectively hold one weak reference. When the
+    strong reference count goes to zero, the collectively held weak
+    reference is released.
+    */
+//     Constructor :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntC1Ev";
+
+    /** Destruct, asserting that the weak reference count is 1.
+    */
+//     Destructor_Base :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntD2Ev";
+
+    /** Return the weak reference count. */
+//     getWeakCnt :: (this: *SkWeakRefCnt) -> s32 #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt10getWeakCntEv";
+
+    /** If fRefCnt is 0, returns 0.
+    *  Otherwise increments fRefCnt, acquires, and returns the old value.
+    */
+//     atomic_conditional_acquire_strong_ref :: (this: *SkWeakRefCnt) -> s32 #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt37atomic_conditional_acquire_strong_refEv";
+
+    /** Creates a strong reference from a weak reference, if possible. The
+    caller must already be an owner. If try_ref() returns true the owner
+    is in posession of an additional strong reference. Both the original
+    reference and new reference must be properly unreferenced. If try_ref()
+    returns false, no strong reference could be created and the owner's
+    reference is in the same state as before the call.
+    */
+//     try_ref :: (this: *SkWeakRefCnt) -> bool #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt7try_refEv";
+
+    /** Increment the weak reference count. Must be balanced by a call to
+    weak_unref().
+    */
+//     weak_ref :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt8weak_refEv";
+
+    /** Decrement the weak reference count. If the weak reference count is 1
+    before the decrement, then call delete on the object. Note that if this
+    is the case, then the object needs to have been allocated via new, and
+    not on the stack.
+    */
+//     weak_unref :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt10weak_unrefEv";
+
+    /** Returns true if there are no strong references to the object. When this
+    is the case all future calls to try_ref() will return false.
+    */
+//     weak_expired :: (this: *SkWeakRefCnt) -> bool #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt12weak_expiredEv";
+
+    /* Invariant: fWeakCnt = #weak + (fRefCnt > 0 ? 1 : 0) */
+    fWeakCnt:            std.atomic(s32);
+
+    INHERITED :: SkRefCnt;
+
+    // Virtual functions:
+    // Normally you should call them via the vtable.
+    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+    // or need to create a vtable yourself.
+
+    /** Destruct, asserting that the weak reference count is 1.
+    */
+//     virtual_Destructor :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntD1Ev";
+    /** Destruct, asserting that the weak reference count is 1.
+    */
+//     virtual_Destructor_Deleting :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntD0Ev";
+
+    /** Called when the strong reference count goes to zero. This allows the
+    object to free any resources it may be holding. Weak references may
+    still exist and their level of allowed access to the object is defined
+    by the object's class.
+    */
+//     virtual_weak_dispose :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt12weak_disposeEv";
+
+    /** Called when the strong reference count goes to zero. Calls weak_dispose
+    on the object and releases the implicit weak reference held
+    collectively by the strong references.
+    */
+//     virtual_internal_dispose :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt16internal_disposeEv";
+}
+SkWeakRefCnt_VTable :: struct #type_info_none {
+    using vtable: SkRefCntBase_VTable;
+
+    weak_dispose: #type (this: *SkWeakRefCnt) -> void #cpp_method;
+}
+SkWeakRefCnt_weak_dispose :: inline (this: *SkWeakRefCnt) { this.vtable.weak_dispose(this); }
+
+get_vtable :: (obj: *SkWeakRefCnt) -> *SkWeakRefCnt_VTable { return obj.vtable; }
+
+
+// SkOnce provides call-once guarantees for Skia, much like std::once_flag/std::call_once().
+//
+// There should be no particularly error-prone gotcha use cases when using SkOnce.
+// It works correctly as a class member, a local, a global, a function-scoped static, whatever.
+SkOnce :: struct {
+//     Constructor :: (this: *SkOnce) -> void #cpp_method #foreign libskia "_ZN6SkOnceC1Ev";
+
+    State :: enum u8 {
+        NotStarted :: 0;
+        Claimed    :: 1;
+        Done       :: 2;
+    }
+    fState: std.atomic(u8) = .{cast(u8)State.NotStarted};
+}
+
+SkDescriptor :: struct {}
+
+SkFontDescriptor :: struct {}
+SkScalerContext :: struct {}
+
+SkAdvancedTypefaceMetrics :: struct {}
+SkScalerContextEffects :: struct {}
+SkScalerContextRec :: struct {}
+
+SkTypefaceID :: u32;
+
+/** Machine endian. */
+SkFontTableTag :: u32;
+
+/** \class SkTypeface
+
+The SkTypeface class specifies the typeface and intrinsic style of a font.
+This is used in the paint, along with optionally algorithmic settings like
+textSize, textSkewX, textScaleX, kFakeBoldText_Mask, to specify
+how text appears when drawn (and measured).
+
+Typeface objects are immutable, and so they can be shared between threads.
+*/
+SkTypeface :: struct {
+    vtable:                *SkTypeface_VTable;
+    using sktypeface__raw: SkTypeface__RAW;
+    #place vtable; #as skweakrefcnt: SkWeakRefCnt; // Support cast to SkWeakRefCnt
+}
+// SkTypeface without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkTypeface
+SkTypeface__RAW :: struct {
+    using,except(INHERITED) skweakrefcnt__raw: SkWeakRefCnt__RAW;
+
+    /** Returns the typeface's intrinsic style attributes. */
+    fontStyle :: (this: *SkTypeface) -> SkFontStyle #cpp_method #foreign libskia "_ZNK10SkTypeface9fontStyleEv";
+
+    /** Returns true if style() has the kBold bit set. */
+    isBold :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface6isBoldEv";
+
+    /** Returns true if style() has the kItalic bit set. */
+    isItalic :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface8isItalicEv";
+
+    /** Returns true if the typeface claims to be fixed-pitch.
+    *  This is a style bit, advance widths may vary even if this returns true.
+    */
+    isFixedPitch :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface12isFixedPitchEv";
+
+    /** Copy into 'coordinates' (allocated by the caller) the design variation coordinates.
+    *
+    *  @param coordinates the span into which to write the design variation coordinates.
+    *
+    *  @return The number of axes, or -1 if there is an error.
+    *  If 'coordinates.size() >= numAxes' then 'coordinates' will be
+    *  filled with the variation coordinates describing the position of this typeface in design
+    *  variation space. It is possible the number of axes can be retrieved but actual position
+    *  cannot.
+    */
+    getVariationDesignPosition :: (this: *SkTypeface, coordinates: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface26getVariationDesignPositionE6SkSpanIN15SkFontArguments17VariationPosition10CoordinateEE";
+
+    /** Copy into 'parameters' (allocated by the caller) the design variation parameters.
+    *
+    *  @param parameters the span into which to write the design variation parameters.
+    *
+    *  @return The number of axes, or -1 if there is an error.
+    *  If 'parameters.size() >= numAxes' then 'parameters' will be
+    *  filled with the variation parameters describing the position of this typeface in design
+    *  variation space. It is possible the number of axes can be retrieved but actual parameters
+    *  cannot.
+    */
+    getVariationDesignParameters :: (this: *SkTypeface, parameters: SkSpan(SkFontParameters.Variation.Axis)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface28getVariationDesignParametersE6SkSpanIN16SkFontParameters9Variation4AxisEE";
+
+    /** Return a 32bit value for this typeface, unique for the underlying font
+    data. Will never return 0.
+    */
+//     uniqueID :: (this: *SkTypeface) -> SkTypefaceID #cpp_method #foreign libskia "_ZNK10SkTypeface8uniqueIDEv";
+
+    /** Returns true if the two typefaces reference the same underlying font,
+    handling either being null (treating null as not equal to any font).
+    */
+    Equal :: (facea: *SkTypeface, faceb: *SkTypeface) -> bool #foreign libskia "_ZN10SkTypeface5EqualEPKS_S1_";
+
+    /** Returns a non-null typeface which contains no glyphs. */
+    MakeEmpty :: () -> sk_sp(SkTypeface) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTypeface9MakeEmptyEv";
+
+    /** Return a new typeface based on this typeface but parameterized as specified in the
+    SkFontArguments. If the SkFontArguments does not supply an argument for a parameter
+    in the font then the value from this typeface will be used as the value for that
+    argument. If the cloned typeface would be exaclty the same as this typeface then
+    this typeface may be ref'ed and returned. May return nullptr on failure.
+    */
+    makeClone :: (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface9makeCloneERK15SkFontArguments";
+    makeClone :: (this: *SkTypeface, unknown0: SkFontArguments) -> sk_sp(SkTypeface) #no_context {
+        return makeClone(this, *unknown0);
+    }
+
+    /**
+    *  A typeface can serialize just a descriptor (names, etc.), or it can also include the
+    *  actual font data (which can be large). This enum controls how serialize() decides what
+    *  to serialize.
+    */
+    SerializeBehavior :: enum s32 {
+        DoIncludeData      :: 0;
+        DontIncludeData    :: 1;
+        IncludeDataIfLocal :: 2;
+
+        kDoIncludeData      :: DoIncludeData;
+        kDontIncludeData    :: DontIncludeData;
+        kIncludeDataIfLocal :: IncludeDataIfLocal;
+    }
+
+    /** Write a unique signature to a stream, sufficient to reconstruct a
+    typeface referencing the same font when Deserialize is called.
+    */
+    serialize :: (this: *SkTypeface, unknown0: *SkWStream, unknown1: SkTypeface.SerializeBehavior = .IncludeDataIfLocal) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface9serializeEP9SkWStreamNS_17SerializeBehaviorE";
+
+    /**
+    *  Same as serialize(SkWStream*, ...) but returns the serialized data in SkData, instead of
+    *  writing it to a stream.
+    */
+    serialize :: (this: *SkTypeface, unknown0: SkTypeface.SerializeBehavior = .IncludeDataIfLocal) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface9serializeENS_17SerializeBehaviorE";
+
+    /** Given the data previously written by serialize(), return a new instance
+    of a typeface referring to the same font. If that font is not available,
+    return nullptr.
+    Goes through all registered typeface factories and lastResortMgr (if non-null).
+    Does not affect ownership of SkStream.
+    */
+    MakeDeserialize :: (unknown0: *SkStream, lastResortMgr: sk_sp(SkFontMgr)) -> sk_sp(SkTypeface) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTypeface15MakeDeserializeEP8SkStream5sk_spI9SkFontMgrE";
+
+    /**
+    *  Given an array of UTF32 character codes, return their corresponding glyph IDs.
+    *
+    *  @param unis span of UTF32 chars
+    *  @param glyphs returns the corresponding glyph IDs for each character.
+    */
+    unicharsToGlyphs :: (this: *SkTypeface, unis: SkSpan(SkUnichar), glyphs: SkSpan(SkGlyphID)) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface16unicharsToGlyphsE6SkSpanIKiES0_ItE";
+
+    textToGlyphs :: (this: *SkTypeface, text: *void, byteLength: u64, encoding: SkTextEncoding, glyphs: SkSpan(SkGlyphID)) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface12textToGlyphsEPKvm14SkTextEncoding6SkSpanItE";
+
+    /**
+    *  Return the glyphID that corresponds to the specified unicode code-point
+    *  (in UTF32 encoding). If the unichar is not supported, returns 0.
+    *
+    *  This is a short-cut for calling unicharsToGlyphs().
+    */
+    unicharToGlyph :: (this: *SkTypeface, unichar: SkUnichar) -> SkGlyphID #cpp_method #foreign libskia "_ZNK10SkTypeface14unicharToGlyphEi";
+
+    /**
+    *  Return the number of glyphs in the typeface.
+    */
+    countGlyphs :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface11countGlyphsEv";
+
+    /** Return the number of tables in the font. */
+    countTables :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface11countTablesEv";
+
+    /** Copy into tags[] (allocated by the caller) the list of table tags in
+    *  the font, and return the number. This will be the same as CountTables()
+    *  or 0 if an error occured. If tags is empty, this only returns the count
+    *  (the same as calling countTables()).
+    */
+    readTableTags :: (this: *SkTypeface, tags: SkSpan(SkFontTableTag)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface13readTableTagsE6SkSpanIjE";
+
+    /** Given a table tag, return the size of its contents, or 0 if not present
+    */
+    getTableSize :: (this: *SkTypeface, unknown0: SkFontTableTag) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface12getTableSizeEj";
+
+    /** Copy the contents of a table into data (allocated by the caller). Note
+    *  that the contents of the table will be in their native endian order
+    *  (which for most truetype tables is big endian). If the table tag is
+    *  not found, or there is an error copying the data, then 0 is returned.
+    *  If this happens, it is possible that some or all of the memory pointed
+    *  to by data may have been written to, even though an error has occured.
+    *
+    *  @param tag  The table tag whose contents are to be copied
+    *  @param offset The offset in bytes into the table's contents where the
+    *  copy should start from.
+    *  @param length The number of bytes, starting at offset, of table data
+    *  to copy.
+    *  @param data storage address where the table contents are copied to
+    *  @return the number of bytes actually copied into data. If offset+length
+    *  exceeds the table's size, then only the bytes up to the table's
+    *  size are actually copied, and this is the value returned. If
+    *  offset > the table's size, or tag is not a valid table,
+    *  then 0 is returned.
+    */
+    getTableData :: (this: *SkTypeface, tag: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface12getTableDataEjmmPv";
+
+    /**
+    *  Return an immutable copy of the requested font table, or nullptr if that table was
+    *  not found. This can sometimes be faster than calling getTableData() twice: once to find
+    *  the length, and then again to copy the data.
+    *
+    *  @param tag  The table tag whose contents are to be copied
+    *  @return an immutable copy of the table's data, or nullptr.
+    */
+    copyTableData :: (this: *SkTypeface, tag: SkFontTableTag) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface13copyTableDataEj";
+
+    /**
+    *  Return the units-per-em value for this typeface, or zero if there is an
+    *  error.
+    */
+    getUnitsPerEm :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface13getUnitsPerEmEv";
+
+    /**
+    *  Given a run of glyphs, return the associated horizontal adjustments.
+    *  Adjustments are in "design units", which are integers relative to the
+    *  typeface's units per em (see getUnitsPerEm).
+    *
+    *  Some typefaces are known to never support kerning. Calling this method
+    *  with empty spans (e.g. getKerningPairAdustments({}, {})) returns
+    *  a boolean indicating if the typeface might support kerning. If it
+    *  returns false, then it will always return false (no kerning) for all
+    *  possible glyph runs. If it returns true, then it *may* return true for
+    *  some glyph runs.
+    *
+    *  If the method returns true, and there are 1 or more glyphs in the span, then
+    *  this will return in adjustments N values,
+    *  where N = min(glyphs.size() - 1, adjustments.size()).
+    
+    *  If the method returns false, then no kerning should be applied, and the adjustments
+    *  array will be in an undefined state (possibly some values may have been
+    *  written, but none of them should be interpreted as valid values).
+    */
+    getKerningPairAdjustments :: (this: *SkTypeface, glyphs: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface25getKerningPairAdjustmentsE6SkSpanIKtES0_IiE";
+
+    LocalizedString :: struct {
+        fString:   SkString;
+        fLanguage: SkString;
+    }
+
+    LocalizedStrings :: struct {
+        vtable: *LocalizedStrings_VTable;
+
+//         Constructor :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsC2Ev";
+//         Destructor_Base :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsD2Ev";
+
+//         unref :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStrings5unrefEv";
+
+//         CopyConstructor :: (this: *LocalizedStrings, unknown0: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsC2ERKS0_";
+        CopyConstructor :: (this: *LocalizedStrings, unknown0: LocalizedStrings) #no_context {
+            CopyConstructor(this, *unknown0);
+        }
+
+        // Virtual functions:
+        // Normally you should call them via the vtable.
+        // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+        // or need to create a vtable yourself.
+
+//         virtual_Destructor :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsD1Ev";
+//         virtual_Destructor_Deleting :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsD0Ev";
+//         virtual_next :: (this: *LocalizedStrings, localizedString: *LocalizedString) -> bool #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStrings4nextEPNS_15LocalizedStringE";
+    }
+    LocalizedStrings_VTable :: struct #type_info_none {
+        Destructor:          #type (this: *SkTypeface.LocalizedStrings) -> void #cpp_method;
+        Destructor_Deleting: #type (this: *SkTypeface.LocalizedStrings) -> void #cpp_method;
+        next:                #type (this: *SkTypeface.LocalizedStrings, localizedString: *SkTypeface.LocalizedString) -> bool #cpp_method;
+    }
+    LocalizedStrings_Destructor :: inline (this: *LocalizedStrings) { this.vtable.Destructor(this); }
+    LocalizedStrings_Destructor_Deleting :: inline (this: *LocalizedStrings) { this.vtable.Destructor_Deleting(this); }
+    LocalizedStrings_next :: inline (this: *LocalizedStrings, localizedString: *LocalizedString) -> bool { return this.vtable.next(this, localizedString); }
+
+    get_vtable :: (obj: *LocalizedStrings) -> *LocalizedStrings_VTable { return obj.vtable; }
+
+
+//     operator_assign :: (this: *SkTypeface.LocalizedStrings, unknown0: *SkTypeface.LocalizedStrings) -> *SkTypeface.LocalizedStrings #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsaSERKS0_";
+    operator_assign :: (this: *SkTypeface.LocalizedStrings, unknown0: SkTypeface.LocalizedStrings) -> *SkTypeface.LocalizedStrings #no_context {
+        return operator_assign(this, *unknown0);
+    }
+
+    /**
+    *  Returns an iterator which will attempt to enumerate all of the
+    *  family names specified by the font.
+    *  It is the caller's responsibility to unref() the returned pointer.
+    */
+    createFamilyNameIterator :: (this: *SkTypeface) -> *SkTypeface.LocalizedStrings #cpp_method #foreign libskia "_ZNK10SkTypeface24createFamilyNameIteratorEv";
+
+    /**
+    *  Return the family name for this typeface. It will always be returned
+    *  encoded as UTF8, but the language of the name is whatever the host
+    *  platform chooses.
+    */
+    getFamilyName :: (this: *SkTypeface, name: *SkString) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface13getFamilyNameEP8SkString";
+
+    /**
+    *  Return the PostScript name for this typeface.
+    *  Value may change based on variation parameters.
+    *  Returns false if no PostScript name is available.
+    */
+    getPostScriptName :: (this: *SkTypeface, name: *SkString) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface17getPostScriptNameEP8SkString";
+
+    /**
+    *  If the primary resource backing this typeface has a name (like a file
+    *  path or URL) representable by unicode code points, the `resourceName`
+    *  will be set. The primary purpose is as a user facing indication about
+    *  where the data was obtained (which font file was used).
+    *
+    *  Returns the number of resources backing this typeface.
+    *
+    *  For local font collections resource name will often be a file path. The
+    *  file path may or may not exist. If it does exist, using it to create an
+    *  SkTypeface may or may not create a similar SkTypeface to this one.
+    */
+    getResourceName :: (this: *SkTypeface, resourceName: *SkString) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface15getResourceNameEP8SkString";
+
+    /**
+    *  Return a stream for the contents of the font data, or NULL on failure.
+    *  If ttcIndex is not null, it is set to the TrueTypeCollection index
+    *  of this typeface within the stream, or 0 if the stream is not a
+    *  collection.
+    *  The caller is responsible for deleting the stream.
+    */
+    openStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface10openStreamEPi";
+
+    /**
+    * Return a stream for the contents of the font data.
+    * Returns nullptr on failure or if the font data isn't already available in stream form.
+    * Use when the stream can be used opportunistically but the calling code would prefer
+    * to fall back to table access if creating the stream would be expensive.
+    * Otherwise acts the same as openStream.
+    */
+    openExistingStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface18openExistingStreamEPi";
+
+    /**
+    *  Return a scalercontext for the given descriptor. It may return a
+    *  stub scalercontext that will not crash, but will draw nothing.
+    */
+    createScalerContext :: (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface19createScalerContextERK22SkScalerContextEffectsPK12SkDescriptor";
+    createScalerContext :: (this: *SkTypeface, unknown0: SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #no_context {
+        return createScalerContext(this, *unknown0, unknown1);
+    }
+
+    /**
+    *  Return a rectangle (scaled to 1-pt) that represents the union of the bounds of all
+    *  of the glyphs, but each one positioned at (0,). This may be conservatively large, and
+    *  will not take into account any hinting or other size-specific adjustments.
+    */
+    getBounds :: (this: *SkTypeface) -> SkRect #cpp_method #foreign libskia "_ZNK10SkTypeface9getBoundsEv";
+
+    // PRIVATE / EXPERIMENTAL -- do not call
+//     filterRec :: (this: *SkTypeface, rec: *SkScalerContextRec) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface9filterRecEP18SkScalerContextRec";
+
+    // PRIVATE / EXPERIMENTAL -- do not call
+//     getFontDescriptor :: (this: *SkTypeface, desc: *SkFontDescriptor, isLocal: *bool) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface17getFontDescriptorEP16SkFontDescriptorPb";
+
+    // PRIVATE / EXPERIMENTAL -- do not call
+//     internal_private_getCTFontRef :: (this: *SkTypeface) -> *void #cpp_method #foreign libskia "_ZNK10SkTypeface29internal_private_getCTFontRefEv";
+
+    /* Skia reserves all tags that begin with a lower case letter and 0 */
+    FactoryId :: SkFourByteTag;
+    Register :: (id: SkTypeface.FactoryId, make: #type (unknown0: std.unique_ptr(SkStreamAsset), unknown1: *SkFontArguments) -> sk_sp(SkTypeface) #c_call #cpp_return_type_is_non_pod) -> void #foreign libskia "_ZN10SkTypeface8RegisterEjPF5sk_spIS_ESt10unique_ptrI13SkStreamAssetSt14default_deleteIS3_EERK15SkFontArgumentsE";
+
+    // needed until onGetTableTags() is updated to take a span
+    anon_enum_20 :: enum u32 {
+        MAX_REASONABLE_TABLE_COUNT :: 65535;
+    }
+
+    Constructor :: (this: *SkTypeface, style: *SkFontStyle, isFixedPitch := false) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceC2ERK11SkFontStyleb";
+    Constructor :: (this: *SkTypeface, style: SkFontStyle, isFixedPitch := false) #no_context {
+        Constructor(this, *style, isFixedPitch);
+    }
+    Destructor_Base :: (this: *SkTypeface) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceD2Ev";
+
+    /** Sets the fixedPitch bit. If used, must be called in the constructor. */
+//     setIsFixedPitch :: (this: *SkTypeface, isFixedPitch: bool) -> void #cpp_method #foreign libskia "_ZN10SkTypeface15setIsFixedPitchEb";
+
+    /** Sets the font style. If used, must be called in the constructor. */
+//     setFontStyle :: (this: *SkTypeface, style: SkFontStyle) -> void #cpp_method #foreign libskia "_ZN10SkTypeface12setFontStyleE11SkFontStyle";
+
+    /** Returns true if the typeface's glyph masks may refer to the foreground
+    *  paint foreground color. This is needed to determine caching requirements. Usually true for
+    *  typefaces that contain a COLR table.
+    */
+    glyphMaskNeedsCurrentColor :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface26glyphMaskNeedsCurrentColorEv";
+
+    /** Retrieve detailed typeface metrics.  Used by the PDF backend.  */
+    getAdvancedMetrics :: (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface18getAdvancedMetricsEv";
+
+    fUniqueID:         SkTypefaceID;
+    fStyle:            SkFontStyle;
+    fBounds:           SkRect;
+    fBoundsOnce:       SkOnce;
+    fIsFixedPitch:     bool;
+
+    INHERITED :: SkWeakRefCnt;
+
+    // Virtual functions:
+    // Normally you should call them via the vtable.
+    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+    // or need to create a vtable yourself.
+
+    virtual_Destructor :: (this: *SkTypeface) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceD1Ev";
+    virtual_Destructor_Deleting :: (this: *SkTypeface) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceD0Ev";
+
+//     virtual_onMakeClone :: (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface11onMakeCloneERK15SkFontArguments";
+
+    virtual_onGetFontStyle :: (this: *SkTypeface) -> SkFontStyle #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetFontStyleEv";
+
+    virtual_onGetFixedPitch :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface15onGetFixedPitchEv";
+
+    // Must return a valid scaler context. It can not return nullptr.
+//     virtual_onCreateScalerContext :: (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface21onCreateScalerContextERK22SkScalerContextEffectsPK12SkDescriptor";
+
+    virtual_onCreateScalerContextAsProxyTypeface :: (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor, proxyTypeface: *SkTypeface) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface36onCreateScalerContextAsProxyTypefaceERK22SkScalerContextEffectsPK12SkDescriptorPS_";
+
+//     virtual_onFilterRec :: (this: *SkTypeface, unknown0: *SkScalerContextRec) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface11onFilterRecEP18SkScalerContextRec";
+
+    //  Subclasses *must* override this method to work with the PDF backend.
+//     virtual_onGetAdvancedMetrics :: (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface20onGetAdvancedMetricsEv";
+
+    // For type1 postscript fonts only, set the glyph names for each glyph.
+    // destination array is non-null, and points to an array of size this->countGlyphs().
+    // Backends that do not suport type1 fonts should not override.
+//     virtual_getPostScriptGlyphNames :: (this: *SkTypeface, unknown0: *SkString) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface23getPostScriptGlyphNamesEP8SkString";
+
+    // The mapping from glyph to Unicode; array indices are glyph ids.
+    // For each glyph, give the default Unicode value, if it exists.
+    // dstArray is non-null, and points to an array of size this->countGlyphs().
+    virtual_getGlyphToUnicodeMap :: (this: *SkTypeface, dstArray: SkSpan(SkUnichar)) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface20getGlyphToUnicodeMapE6SkSpanIiE";
+
+//     virtual_onOpenStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface12onOpenStreamEPi";
+
+    virtual_onOpenExistingStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface20onOpenExistingStreamEPi";
+
+//     virtual_onGlyphMaskNeedsCurrentColor :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface28onGlyphMaskNeedsCurrentColorEv";
+
+//     virtual_onGetVariationDesignPosition :: (this: *SkTypeface, unknown0: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface28onGetVariationDesignPositionE6SkSpanIN15SkFontArguments17VariationPosition10CoordinateEE";
+
+//     virtual_onGetVariationDesignParameters :: (this: *SkTypeface, unknown0: SkSpan(SkFontParameters.Variation.Axis)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface30onGetVariationDesignParametersE6SkSpanIN16SkFontParameters9Variation4AxisEE";
+
+//     virtual_onGetFontDescriptor :: (this: *SkTypeface, unknown0: *SkFontDescriptor, isLocal: *bool) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface19onGetFontDescriptorEP16SkFontDescriptorPb";
+
+//     virtual_onCharsToGlyphs :: (this: *SkTypeface, unknown0: SkSpan(SkUnichar), unknown1: SkSpan(SkGlyphID)) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface15onCharsToGlyphsE6SkSpanIKiES0_ItE";
+//     virtual_onCountGlyphs :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface13onCountGlyphsEv";
+
+//     virtual_onGetUPEM :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface9onGetUPEMEv";
+    virtual_onGetKerningPairAdjustments :: (this: *SkTypeface, unknown0: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface27onGetKerningPairAdjustmentsE6SkSpanIKtES0_IiE";
+
+    /** Returns the family name of the typeface as known by its font manager.
+    *  This name may or may not be produced by the family name iterator.
+    */
+//     virtual_onGetFamilyName :: (this: *SkTypeface, familyName: *SkString) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface15onGetFamilyNameEP8SkString";
+//     virtual_onGetPostScriptName :: (this: *SkTypeface, unknown0: *SkString) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface19onGetPostScriptNameEP8SkString";
+    virtual_onGetResourceName :: (this: *SkTypeface, resourceName: *SkString) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface17onGetResourceNameEP8SkString";
+
+    /** Returns an iterator over the family names in the font. */
+//     virtual_onCreateFamilyNameIterator :: (this: *SkTypeface) -> *SkTypeface.LocalizedStrings #cpp_method #foreign libskia "_ZNK10SkTypeface26onCreateFamilyNameIteratorEv";
+
+//     virtual_onGetTableTags :: (this: *SkTypeface, unknown0: SkSpan(SkFontTableTag)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetTableTagsE6SkSpanIjE";
+//     virtual_onGetTableData :: (this: *SkTypeface, unknown0: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetTableDataEjmmPv";
+
+    virtual_onCopyTableData :: (this: *SkTypeface, unknown0: SkFontTableTag) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface15onCopyTableDataEj";
+
+    virtual_onComputeBounds :: (this: *SkTypeface, unknown0: *SkRect) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface15onComputeBoundsEP6SkRect";
+
+//     virtual_onGetCTFontRef :: (this: *SkTypeface) -> *void #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetCTFontRefEv";
+}
+SkTypeface_VTable :: struct #type_info_none {
+    using,except(vtable) vtable:                               SkWeakRefCnt_VTable;
+
+    onMakeClone:                          #type (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+
+    onGetFontStyle:                       #type (this: *SkTypeface) -> SkFontStyle #cpp_method;
+
+    onGetFixedPitch:                      #type (this: *SkTypeface) -> bool #cpp_method;
+
+    onCreateScalerContext:                #type (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod;
+
+    onCreateScalerContextAsProxyTypeface: #type (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor, proxyTypeface: *SkTypeface) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod;
+
+    onFilterRec:                          #type (this: *SkTypeface, unknown0: *SkScalerContextRec) -> void #cpp_method;
+
+    onGetAdvancedMetrics:                 #type (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) #cpp_method #cpp_return_type_is_non_pod;
+
+    getPostScriptGlyphNames:              #type (this: *SkTypeface, unknown0: *SkString) -> void #cpp_method;
+
+    getGlyphToUnicodeMap:                 #type (this: *SkTypeface, dstArray: SkSpan(SkUnichar)) -> void #cpp_method;
+
+    onOpenStream:                         #type (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod;
+
+    onOpenExistingStream:                 #type (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod;
+
+    onGlyphMaskNeedsCurrentColor:         #type (this: *SkTypeface) -> bool #cpp_method;
+
+    onGetVariationDesignPosition:         #type (this: *SkTypeface, unknown0: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 #cpp_method;
+
+    onGetVariationDesignParameters:       #type (this: *SkTypeface, unknown0: SkSpan(SkFontParameters.Variation.Axis)) -> s32 #cpp_method;
+
+    onGetFontDescriptor:                  #type (this: *SkTypeface, unknown0: *SkFontDescriptor, isLocal: *bool) -> void #cpp_method;
+
+    onCharsToGlyphs:                      #type (this: *SkTypeface, unknown0: SkSpan(SkUnichar), unknown1: SkSpan(SkGlyphID)) -> void #cpp_method;
+    onCountGlyphs:                        #type (this: *SkTypeface) -> s32 #cpp_method;
+
+    onGetUPEM:                            #type (this: *SkTypeface) -> s32 #cpp_method;
+    onGetKerningPairAdjustments:          #type (this: *SkTypeface, unknown0: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool #cpp_method;
+
+    onGetFamilyName:                      #type (this: *SkTypeface, familyName: *SkString) -> void #cpp_method;
+    onGetPostScriptName:                  #type (this: *SkTypeface, unknown0: *SkString) -> bool #cpp_method;
+    onGetResourceName:                    #type (this: *SkTypeface, resourceName: *SkString) -> s32 #cpp_method;
+
+    onCreateFamilyNameIterator:           #type (this: *SkTypeface) -> *SkTypeface.LocalizedStrings #cpp_method;
+
+    onGetTableTags:                       #type (this: *SkTypeface, unknown0: SkSpan(SkFontTableTag)) -> s32 #cpp_method;
+    onGetTableData:                       #type (this: *SkTypeface, unknown0: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 #cpp_method;
+
+    onCopyTableData:                      #type (this: *SkTypeface, unknown0: SkFontTableTag) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod;
+
+    onComputeBounds:                      #type (this: *SkTypeface, unknown0: *SkRect) -> bool #cpp_method;
+
+    onGetCTFontRef:                       #type (this: *SkTypeface) -> *void #cpp_method;
+}
+SkTypeface_onMakeClone :: inline (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) { return this.vtable.onMakeClone(this, unknown0); }
+
+SkTypeface_onGetFontStyle :: inline (this: *SkTypeface) -> SkFontStyle { return this.vtable.onGetFontStyle(this); }
+
+SkTypeface_onGetFixedPitch :: inline (this: *SkTypeface) -> bool { return this.vtable.onGetFixedPitch(this); }
+
+SkTypeface_onCreateScalerContext :: inline (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) { return this.vtable.onCreateScalerContext(this, unknown0, unknown1); }
+
+SkTypeface_onCreateScalerContextAsProxyTypeface :: inline (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor, proxyTypeface: *SkTypeface) -> std.unique_ptr(SkScalerContext) { return this.vtable.onCreateScalerContextAsProxyTypeface(this, unknown0, unknown1, proxyTypeface); }
+
+SkTypeface_onFilterRec :: inline (this: *SkTypeface, unknown0: *SkScalerContextRec) { this.vtable.onFilterRec(this, unknown0); }
+
+SkTypeface_onGetAdvancedMetrics :: inline (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) { return this.vtable.onGetAdvancedMetrics(this); }
+
+SkTypeface_getPostScriptGlyphNames :: inline (this: *SkTypeface, unknown0: *SkString) { this.vtable.getPostScriptGlyphNames(this, unknown0); }
+
+SkTypeface_getGlyphToUnicodeMap :: inline (this: *SkTypeface, dstArray: SkSpan(SkUnichar)) { this.vtable.getGlyphToUnicodeMap(this, dstArray); }
+
+SkTypeface_onOpenStream :: inline (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) { return this.vtable.onOpenStream(this, ttcIndex); }
+
+SkTypeface_onOpenExistingStream :: inline (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) { return this.vtable.onOpenExistingStream(this, ttcIndex); }
+
+SkTypeface_onGlyphMaskNeedsCurrentColor :: inline (this: *SkTypeface) -> bool { return this.vtable.onGlyphMaskNeedsCurrentColor(this); }
+
+SkTypeface_onGetVariationDesignPosition :: inline (this: *SkTypeface, unknown0: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 { return this.vtable.onGetVariationDesignPosition(this, unknown0); }
+
+SkTypeface_onGetVariationDesignParameters :: inline (this: *SkTypeface, unknown0: SkSpan(SkFontParameters.Variation.Axis)) -> s32 { return this.vtable.onGetVariationDesignParameters(this, unknown0); }
+
+SkTypeface_onGetFontDescriptor :: inline (this: *SkTypeface, unknown0: *SkFontDescriptor, isLocal: *bool) { this.vtable.onGetFontDescriptor(this, unknown0, isLocal); }
+
+SkTypeface_onCharsToGlyphs :: inline (this: *SkTypeface, unknown0: SkSpan(SkUnichar), unknown1: SkSpan(SkGlyphID)) { this.vtable.onCharsToGlyphs(this, unknown0, unknown1); }
+SkTypeface_onCountGlyphs :: inline (this: *SkTypeface) -> s32 { return this.vtable.onCountGlyphs(this); }
+
+SkTypeface_onGetUPEM :: inline (this: *SkTypeface) -> s32 { return this.vtable.onGetUPEM(this); }
+SkTypeface_onGetKerningPairAdjustments :: inline (this: *SkTypeface, unknown0: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool { return this.vtable.onGetKerningPairAdjustments(this, unknown0, adjustments); }
+
+SkTypeface_onGetFamilyName :: inline (this: *SkTypeface, familyName: *SkString) { this.vtable.onGetFamilyName(this, familyName); }
+SkTypeface_onGetPostScriptName :: inline (this: *SkTypeface, unknown0: *SkString) -> bool { return this.vtable.onGetPostScriptName(this, unknown0); }
+SkTypeface_onGetResourceName :: inline (this: *SkTypeface, resourceName: *SkString) -> s32 { return this.vtable.onGetResourceName(this, resourceName); }
+
+SkTypeface_onCreateFamilyNameIterator :: inline (this: *SkTypeface) -> *SkTypeface.LocalizedStrings { return this.vtable.onCreateFamilyNameIterator(this); }
+
+SkTypeface_onGetTableTags :: inline (this: *SkTypeface, unknown0: SkSpan(SkFontTableTag)) -> s32 { return this.vtable.onGetTableTags(this, unknown0); }
+SkTypeface_onGetTableData :: inline (this: *SkTypeface, unknown0: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 { return this.vtable.onGetTableData(this, unknown0, offset, length, data); }
+
+SkTypeface_onCopyTableData :: inline (this: *SkTypeface, unknown0: SkFontTableTag) -> sk_sp(SkData) { return this.vtable.onCopyTableData(this, unknown0); }
+
+SkTypeface_onComputeBounds :: inline (this: *SkTypeface, unknown0: *SkRect) -> bool { return this.vtable.onComputeBounds(this, unknown0); }
+
+SkTypeface_onGetCTFontRef :: inline (this: *SkTypeface) -> *void { return this.vtable.onGetCTFontRef(this); }
+
+get_vtable :: (obj: *SkTypeface) -> *SkTypeface_VTable { return obj.vtable; }
+
+
+skcpu :: struct {
+    GlyphRunListPainter :: struct {}
+}
+
+/** \class SkFont
+SkFont controls options applied when drawing and measuring text.
+*/
+SkFont :: struct {
+    /** Whether edge pixels draw opaque or with partial transparency.
+    */
+    Edging :: enum s32 {
+        Alias             :: 0;
+        AntiAlias         :: 1;
+        SubpixelAntiAlias :: 2;
+
+        kAlias             :: Alias;
+        kAntiAlias         :: AntiAlias;
+        kSubpixelAntiAlias :: SubpixelAntiAlias;
+    }
+
+    /** Constructs SkFont with default values.
+    
+    @return  default initialized SkFont
+    */
+    Constructor :: (this: *SkFont) -> void #cpp_method #foreign libskia "_ZN6SkFontC1Ev";
+
+    /** Constructs SkFont with default values with SkTypeface and size.
+    
+    @param typeface  font and style used to draw and measure text
+    @param size      EM size in local coordinate units
+    @return          initialized SkFont
+    */
+    Constructor :: (this: *SkFont, typeface: sk_sp(SkTypeface), size: SkScalar) -> void #cpp_method #foreign libskia "_ZN6SkFontC1E5sk_spI10SkTypefaceEf";
+
+    /** Constructs SkFont with default values with SkTypeface.
+    
+    @param typeface  font and style used to draw and measure text
+    @return          initialized SkFont
+    */
+    Constructor :: (this: *SkFont, typeface: sk_sp(SkTypeface)) -> void #cpp_method #foreign libskia "_ZN6SkFontC1E5sk_spI10SkTypefaceE";
+
+    /** Constructs SkFont with default values with SkTypeface and size in points,
+    horizontal scale, and horizontal skew. Horizontal scale emulates condensed
+    and expanded fonts. Horizontal skew emulates oblique fonts.
+    
+    @param typeface  font and style used to draw and measure text
+    @param size      EM size in local coordinate units
+    @param scaleX    text horizontal scale
+    @param skewX     additional shear on x-axis relative to y-axis
+    @return          initialized SkFont
+    */
+    Constructor :: (this: *SkFont, typeface: sk_sp(SkTypeface), size: SkScalar, scaleX: SkScalar, skewX: SkScalar) -> void #cpp_method #foreign libskia "_ZN6SkFontC1E5sk_spI10SkTypefaceEfff";
+
+    /** If true, instructs the font manager to always hint glyphs.
+    Returned value is only meaningful if platform uses FreeType as the font manager.
+    
+    @return  true if all glyphs are hinted
+    */
+//     isForceAutoHinting :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont18isForceAutoHintingEv";
+
+    /** Returns true if font engine may return glyphs from font bitmaps instead of from outlines.
+    
+    @return  true if glyphs may be font bitmaps
+    */
+//     isEmbeddedBitmaps :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont17isEmbeddedBitmapsEv";
+
+    /** Returns true if glyphs may be drawn at sub-pixel offsets.
+    
+    @return  true if glyphs may be drawn at sub-pixel offsets.
+    */
+//     isSubpixel :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont10isSubpixelEv";
+
+    /** Returns true if font and glyph metrics are requested to be linearly scalable.
+    
+    @return  true if font and glyph metrics are requested to be linearly scalable.
+    */
+//     isLinearMetrics :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont15isLinearMetricsEv";
+
+    /** Returns true if bold is approximated by increasing the stroke width when creating glyph
+    bitmaps from outlines.
+    
+    @return  bold is approximated through stroke width
+    */
+//     isEmbolden :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont10isEmboldenEv";
+
+    /** Returns true if baselines will be snapped to pixel positions when the current transformation
+    matrix is axis aligned.
+    
+    @return  baselines may be snapped to pixels
+    */
+//     isBaselineSnap :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont14isBaselineSnapEv";
+
+    /** Sets whether to always hint glyphs.
+    If forceAutoHinting is set, instructs the font manager to always hint glyphs.
+    
+    Only affects platforms that use FreeType as the font manager.
+    
+    @param forceAutoHinting  setting to always hint glyphs
+    */
+    setForceAutoHinting :: (this: *SkFont, forceAutoHinting: bool) -> void #cpp_method #foreign libskia "_ZN6SkFont19setForceAutoHintingEb";
+
+    /** Requests, but does not require, to use bitmaps in fonts instead of outlines.
+    
+    @param embeddedBitmaps  setting to use bitmaps in fonts
+    */
+    setEmbeddedBitmaps :: (this: *SkFont, embeddedBitmaps: bool) -> void #cpp_method #foreign libskia "_ZN6SkFont18setEmbeddedBitmapsEb";
+
+    /** Requests, but does not require, that glyphs respect sub-pixel positioning.
+    
+    @param subpixel  setting for sub-pixel positioning
+    */
+    setSubpixel :: (this: *SkFont, subpixel: bool) -> void #cpp_method #foreign libskia "_ZN6SkFont11setSubpixelEb";
+
+    /** Requests, but does not require, linearly scalable font and glyph metrics.
+    
+    For outline fonts 'true' means font and glyph metrics should ignore hinting and rounding.
+    Note that some bitmap formats may not be able to scale linearly and will ignore this flag.
+    
+    @param linearMetrics  setting for linearly scalable font and glyph metrics.
+    */
+    setLinearMetrics :: (this: *SkFont, linearMetrics: bool) -> void #cpp_method #foreign libskia "_ZN6SkFont16setLinearMetricsEb";
+
+    /** Increases stroke width when creating glyph bitmaps to approximate a bold typeface.
+    
+    @param embolden  setting for bold approximation
+    */
+    setEmbolden :: (this: *SkFont, embolden: bool) -> void #cpp_method #foreign libskia "_ZN6SkFont11setEmboldenEb";
+
+    /** Requests that baselines be snapped to pixels when the current transformation matrix is axis
+    aligned.
+    
+    @param baselineSnap  setting for baseline snapping to pixels
+    */
+    setBaselineSnap :: (this: *SkFont, baselineSnap: bool) -> void #cpp_method #foreign libskia "_ZN6SkFont15setBaselineSnapEb";
+
+    /** Whether edge pixels draw opaque or with partial transparency.
+    */
+//     getEdging :: (this: *SkFont) -> Edging #cpp_method #foreign libskia "_ZNK6SkFont9getEdgingEv";
+
+    /** Requests, but does not require, that edge pixels draw opaque or with
+    partial transparency.
+    */
+    setEdging :: (this: *SkFont, edging: Edging) -> void #cpp_method #foreign libskia "_ZN6SkFont9setEdgingENS_6EdgingE";
+
+    /** Sets level of glyph outline adjustment.
+    Does not check for valid values of hintingLevel.
+    */
+    setHinting :: (this: *SkFont, hintingLevel: SkFontHinting) -> void #cpp_method #foreign libskia "_ZN6SkFont10setHintingE13SkFontHinting";
+
+    /** Returns level of glyph outline adjustment.
+    */
+//     getHinting :: (this: *SkFont) -> SkFontHinting #cpp_method #foreign libskia "_ZNK6SkFont10getHintingEv";
+
+    /** Returns a font with the same attributes of this font, but with the specified size.
+    Returns nullptr if size is less than zero, infinite, or NaN.
+    
+    @param size  EM size in local coordinate units
+    @return      initialized SkFont
+    */
+    makeWithSize :: (this: *SkFont, size: SkScalar) -> SkFont #cpp_method #foreign libskia "_ZNK6SkFont12makeWithSizeEf";
+
+    /** Does not alter SkTypeface SkRefCnt.
+    
+    @return  non-null SkTypeface
+    */
+//     getTypeface :: (this: *SkFont) -> *SkTypeface #cpp_method #foreign libskia "_ZNK6SkFont11getTypefaceEv";
+
+    /** Return EM size in local coordinate units.
+    See https://skia.org/docs/user/coordinates/#local-coordinates .
+    
+    @return  EM size in local coordinate units
+    */
+//     getSize :: (this: *SkFont) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont7getSizeEv";
+
+    /** Returns text scale on x-axis.
+    Default value is 1.
+    
+    @return  text horizontal scale
+    */
+//     getScaleX :: (this: *SkFont) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont9getScaleXEv";
+
+    /** Returns text skew on x-axis.
+    Default value is zero.
+    
+    @return  additional shear on x-axis relative to y-axis
+    */
+//     getSkewX :: (this: *SkFont) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont8getSkewXEv";
+
+    /** Increases SkTypeface SkRefCnt by one.
+    
+    @return  A non-null SkTypeface.
+    */
+//     refTypeface :: (this: *SkFont) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK6SkFont11refTypefaceEv";
+
+    /** Sets SkTypeface to typeface, decreasing SkRefCnt of the previous SkTypeface.
+    Pass nullptr to clear SkTypeface and use an empty typeface (which draws nothing).
+    Increments tf SkRefCnt by one.
+    
+    @param tf  font and style used to draw text
+    */
+    setTypeface :: (this: *SkFont, tf: sk_sp(SkTypeface)) -> void #cpp_method #foreign libskia "_ZN6SkFont11setTypefaceE5sk_spI10SkTypefaceE";
+
+    /** Sets the EM size in local coordinate units.
+    See https://skia.org/docs/user/coordinates/#local-coordinates .
+    Has no effect if textSize is not greater than or equal to zero.
+    
+    @param textSize  EM size in local coordinate units
+    */
+    setSize :: (this: *SkFont, textSize: SkScalar) -> void #cpp_method #foreign libskia "_ZN6SkFont7setSizeEf";
+
+    /** Sets text scale on x-axis.
+    Default value is 1.
+    
+    @param scaleX  text horizontal scale
+    */
+    setScaleX :: (this: *SkFont, scaleX: SkScalar) -> void #cpp_method #foreign libskia "_ZN6SkFont9setScaleXEf";
+
+    /** Sets text skew on x-axis.
+    Default value is zero.
+    
+    @param skewX  additional shear on x-axis relative to y-axis
+    */
+    setSkewX :: (this: *SkFont, skewX: SkScalar) -> void #cpp_method #foreign libskia "_ZN6SkFont8setSkewXEf";
+
+    /** Converts text into glyph indices.
+    Returns the number of glyph indices represented by text.
+    SkTextEncoding specifies how text represents characters or glyphs.
+    glyphs may be empty, to compute the glyph count.
+    
+    Does not check text for valid character codes or valid glyph indices.
+    
+    If byteLength equals zero, returns zero.
+    If byteLength includes a partial character, the partial character is ignored.
+    
+    If encoding is SkTextEncoding::kUTF8 and text contains an invalid UTF-8 sequence,
+    zero is returned.
+    
+    When encoding is SkTextEncoding::kUTF8, SkTextEncoding::kUTF16, or
+    SkTextEncoding::kUTF32; then each Unicode codepoint is mapped to a
+    single glyph.  This function uses the default character-to-glyph
+    mapping from the SkTypeface and maps characters not found in the
+    SkTypeface to zero.
+    
+    If glyphs.size() is not sufficient to store all the glyphs, no glyphs are copied.
+    The total glyph count is returned for subsequent buffer reallocation.
+    
+    @param text          character storage encoded with SkTextEncoding
+    @param byteLength    length of character storage in bytes
+    @param glyphs        storage for glyph indices; may be empty
+    @return number of glyphs represented by text of length byteLength
+    */
+    textToGlyphs :: (this: *SkFont, text: *void, byteLength: u64, encoding: SkTextEncoding, glyphs: SkSpan(SkGlyphID)) -> u64 #cpp_method #foreign libskia "_ZNK6SkFont12textToGlyphsEPKvm14SkTextEncoding6SkSpanItE";
+
+    /** Returns glyph index for Unicode character.
+    
+    If the character is not supported by the SkTypeface, returns 0.
+    
+    @param uni  Unicode character
+    @return     glyph index
+    */
+    unicharToGlyph :: (this: *SkFont, uni: SkUnichar) -> SkGlyphID #cpp_method #foreign libskia "_ZNK6SkFont14unicharToGlyphEi";
+
+    unicharsToGlyphs :: (this: *SkFont, src: SkSpan(SkUnichar), dst: SkSpan(SkGlyphID)) -> void #cpp_method #foreign libskia "_ZNK6SkFont16unicharsToGlyphsE6SkSpanIKiES0_ItE";
+
+    /** Returns number of glyphs represented by text.
+    
+    If encoding is SkTextEncoding::kUTF8, SkTextEncoding::kUTF16, or
+    SkTextEncoding::kUTF32; then each Unicode codepoint is mapped to a
+    single glyph.
+    
+    @param text          character storage encoded with SkTextEncoding
+    @param byteLength    length of character storage in bytes
+    @return              number of glyphs represented by text of length byteLength
+    */
+//     countText :: (this: *SkFont, text: *void, byteLength: u64, encoding: SkTextEncoding) -> u64 #cpp_method #foreign libskia "_ZNK6SkFont9countTextEPKvm14SkTextEncoding";
+
+    /** Returns the advance width of text.
+    The advance is the normal distance to move before drawing additional text.
+    Returns the bounding box of text if bounds is not nullptr.
+    
+    @param text        character storage encoded with SkTextEncoding
+    @param byteLength  length of character storage in bytes
+    @param bounds      returns bounding box relative to (0, 0) if not nullptr
+    @return            the sum of the default advance widths
+    */
+//     measureText :: (this: *SkFont, text: *void, byteLength: u64, encoding: SkTextEncoding, bounds: *SkRect = null) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont11measureTextEPKvm14SkTextEncodingP6SkRect";
+
+    /** Returns the advance width of text.
+    The advance is the normal distance to move before drawing additional text.
+    Returns the bounding box of text if bounds is not nullptr. The paint
+    stroke settings, mask filter, or path effect may modify the bounds.
+    
+    @param text        character storage encoded with SkTextEncoding
+    @param byteLength  length of character storage in bytes
+    @param bounds      returns bounding box relative to (0, 0) if not nullptr
+    @param paint       optional; may be nullptr
+    @return            the sum of the default advance widths
+    */
+    measureText :: (this: *SkFont, text: *void, byteLength: u64, encoding: SkTextEncoding, bounds: *SkRect, paint: *SkPaint) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont11measureTextEPKvm14SkTextEncodingP6SkRectPK7SkPaint";
+
+    /** Retrieves the advance and bounds for each glyph in glyphs.
+    widths receives min(widths.size(), glyphs.size()) values.
+    bounds receives min(bounds.size(), glyphs.size()) values.
+    
+    @param glyphs      array of glyph indices to be measured
+    @param widths      returns text advances for each glyph
+    @param bounds      returns bounds for each glyph relative to (0, 0)
+    @param paint       optional, specifies stroking, SkPathEffect and SkMaskFilter
+    */
+    getWidthsBounds :: (this: *SkFont, glyphs: SkSpan(SkGlyphID), widths: SkSpan(SkScalar), bounds: SkSpan(SkRect), paint: *SkPaint) -> void #cpp_method #foreign libskia "_ZNK6SkFont15getWidthsBoundsE6SkSpanIKtES0_IfES0_I6SkRectEPK7SkPaint";
+
+    /** Retrieves the advance and bounds for each glyph in glyphs.
+    widths receives min(widths.size(), glyphs.size()) values.
+    
+    @param glyphs      array of glyph indices to be measured
+    @param widths      returns text advances for each glyph
+    */
+//     getWidths :: (this: *SkFont, glyphs: SkSpan(SkGlyphID), widths: SkSpan(SkScalar)) -> void #cpp_method #foreign libskia "_ZNK6SkFont9getWidthsE6SkSpanIKtES0_IfE";
+
+//     getWidth :: (this: *SkFont, glyph: SkGlyphID) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont8getWidthEt";
+
+    /** Retrieves the bounds for each glyph in glyphs.
+    bounds receives min(bounds.size(), glyphs.size()) values.
+    If paint is not nullptr, its stroking, SkPathEffect, and SkMaskFilter fields are respected.
+    
+    @param glyphs      array of glyph indices to be measured
+    @param bounds      returns bounds for each glyph relative to (0, 0); may be nullptr
+    @param paint       optional, specifies stroking, SkPathEffect, and SkMaskFilter
+    */
+//     getBounds :: (this: *SkFont, glyphs: SkSpan(SkGlyphID), bounds: SkSpan(SkRect), paint: *SkPaint) -> void #cpp_method #foreign libskia "_ZNK6SkFont9getBoundsE6SkSpanIKtES0_I6SkRectEPK7SkPaint";
+
+//     getBounds :: (this: *SkFont, glyph: SkGlyphID, paint: *SkPaint) -> SkRect #cpp_method #foreign libskia "_ZNK6SkFont9getBoundsEtPK7SkPaint";
+
+    /** Retrieves the positions for each glyph, beginning at the specified origin.
+    pos receives min(pos.size(), glyphs.size()) values.
+    
+    @param glyphs   array of glyph indices to be positioned
+    @param pos      returns glyphs positions
+    @param origin   location of the first glyph. Defaults to {0, 0}.
+    */
+    getPos :: (this: *SkFont, glyphs: SkSpan(SkGlyphID), pos: SkSpan(SkPoint), origin: SkPoint) -> void #cpp_method #foreign libskia "_ZNK6SkFont6getPosE6SkSpanIKtES0_I7SkPointES3_";
+
+    /** Retrieves the x-positions for each glyph, beginning at the specified origin.
+    xpos receives min(xpos.size(), glyphs.size()) values.
+    
+    @param glyphs   array of glyph indices to be positioned
+    @param xpos     returns glyphs x-positions
+    @param origin   x-position of the first glyph. Defaults to 0.
+    */
+    getXPos :: (this: *SkFont, glyphs: SkSpan(SkGlyphID), xpos: SkSpan(SkScalar), origin: SkScalar = 0) -> void #cpp_method #foreign libskia "_ZNK6SkFont7getXPosE6SkSpanIKtES0_IfEf";
+
+    /** Returns intervals [start, end] describing lines parallel to the advance that intersect
+    *  with the glyphs.
+    *
+    *  @param glyphs   the glyphs to intersect
+    *  @param pos      the position of each glyph
+    *  @param top      the top of the line intersecting
+    *  @param bottom   the bottom of the line intersecting
+    @return         array of pairs of x values [start, end]. May be empty.
+    */
+    getIntercepts :: (this: *SkFont, glyphs: SkSpan(SkGlyphID), pos: SkSpan(SkPoint), top: SkScalar, bottom: SkScalar, unknown0: *SkPaint = null) -> std.vector(SkScalar) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK6SkFont13getInterceptsE6SkSpanIKtES0_IK7SkPointEffPK7SkPaint";
+
+    /*
+    * If the specified glyph can be represented as a path, return its path.
+    * If it is not (e.g. it is represented with a bitmap) return {}.
+    *
+    * Note: an 'empty' glyph (e.g. what a space " " character might map to) can return
+    * a path, but that path may have zero contours.
+    */
+    getPath :: (this: *SkFont, glyphID: SkGlyphID) -> std.optional(SkPath) #cpp_method #foreign libskia "_ZNK6SkFont7getPathEt";
+
+//     getPath :: (this: *SkFont, glyphID: SkGlyphID, path: *SkPath) -> bool #cpp_method #foreign libskia "_ZNK6SkFont7getPathEtP6SkPath";
+
+    /** Returns path corresponding to glyph array.
+    
+    @param glyphIDs      array of glyph indices
+    @param glyphPathProc function returning one glyph description as path
+    @param ctx           function context
+    */
+    getPaths :: (this: *SkFont, glyphIDs: SkSpan(SkGlyphID), glyphPathProc: #type (pathOrNull: *SkPath, mx: *SkMatrix, ctx: *void) -> void #c_call, ctx: *void) -> void #cpp_method #foreign libskia "_ZNK6SkFont8getPathsE6SkSpanIKtEPFvPK6SkPathRK8SkMatrixPvES9_";
+
+    /** Returns SkFontMetrics associated with SkTypeface.
+    The return value is the recommended spacing between lines: the sum of metrics
+    descent, ascent, and leading.
+    If metrics is not nullptr, SkFontMetrics is copied to metrics.
+    Results are scaled by text size but does not take into account
+    dimensions required by text scale, text skew, fake bold,
+    style stroke, and SkPathEffect.
+    
+    @param metrics  storage for SkFontMetrics; may be nullptr
+    @return         recommended spacing between lines
+    */
+    getMetrics :: (this: *SkFont, metrics: *SkFontMetrics) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont10getMetricsEP13SkFontMetrics";
+
+    /** Returns the recommended spacing between lines: the sum of metrics
+    descent, ascent, and leading.
+    Result is scaled by text size but does not take into account
+    dimensions required by stroking and SkPathEffect.
+    Returns the same result as getMetrics().
+    
+    @return  recommended spacing between lines
+    */
+//     getSpacing :: (this: *SkFont) -> SkScalar #cpp_method #foreign libskia "_ZNK6SkFont10getSpacingEv";
+
+    /** Dumps fields of the font to SkDebugf. May change its output over time, so clients should
+    *  not rely on this for anything specific. Used to aid in debugging.
+    */
+    dump :: (this: *SkFont) -> void #cpp_method #foreign libskia "_ZNK6SkFont4dumpEv";
+
+    sk_is_trivially_relocatable :: std.true_type;
+
+    PrivFlags :: enum u32 {
+        ForceAutoHinting_PrivFlag :: 1;
+        EmbeddedBitmaps_PrivFlag  :: 2;
+        Subpixel_PrivFlag         :: 4;
+        LinearMetrics_PrivFlag    :: 8;
+        Embolden_PrivFlag         :: 16;
+        BaselineSnap_PrivFlag     :: 32;
+
+        kForceAutoHinting_PrivFlag :: ForceAutoHinting_PrivFlag;
+        kEmbeddedBitmaps_PrivFlag  :: EmbeddedBitmaps_PrivFlag;
+        kSubpixel_PrivFlag         :: Subpixel_PrivFlag;
+        kLinearMetrics_PrivFlag    :: LinearMetrics_PrivFlag;
+        kEmbolden_PrivFlag         :: Embolden_PrivFlag;
+        kBaselineSnap_PrivFlag     :: BaselineSnap_PrivFlag;
+    }
+
+    kAllFlags:                   u32 : xx PrivFlags.ForceAutoHinting_PrivFlag | xx PrivFlags.EmbeddedBitmaps_PrivFlag | xx PrivFlags.Subpixel_PrivFlag | xx PrivFlags.LinearMetrics_PrivFlag | xx PrivFlags.Embolden_PrivFlag | xx PrivFlags.BaselineSnap_PrivFlag;
+
+    fTypeface:                   sk_sp(SkTypeface);
+    fSize:                       SkScalar;
+    fScaleX:                     SkScalar;
+    fSkewX:                      SkScalar;
+    fFlags:                      u8;
+    fEdging:                     u8;
+    fHinting:                    u8;
+
+    setupForAsPaths :: (this: *SkFont, unknown0: *SkPaint) -> SkScalar #cpp_method #foreign libskia "_ZN6SkFont15setupForAsPathsEP7SkPaint";
+    hasSomeAntiAliasing :: (this: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFont19hasSomeAntiAliasingEv";
+}
+
+/** Compares SkFont and font, and returns true if they are equivalent.
+May return false if SkTypeface has identical contents but different pointers.
+
+@param font  font to compare
+@return      true if SkFont pair are equivalent
+*/
+operator_eq :: (this: *SkFont, font: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFonteqERKS_";
+operator_eq :: (this: SkFont, font: SkFont) -> bool #no_context {
+    return operator_eq(*this, *font);
+}
+
+/** Compares SkFont and font, and returns true if they are not equivalent.
+May return true if SkTypeface has identical contents but different pointers.
+
+@param font  font to compare
+@return      true if SkFont pair are not equivalent
+*/
+// operator_neq :: (this: *SkFont, font: *SkFont) -> bool #cpp_method #foreign libskia "_ZNK6SkFontneERKS_";
+operator_neq :: (this: SkFont, font: SkFont) -> bool #no_context {
+    return operator_neq(*this, *font);
+}
+
+/** \class SkFontMetrics
+The metrics of an SkFont.
+The metric values are consistent with the Skia y-down coordinate system.
+*/
+SkFontMetrics :: struct {
+    /** \enum FontMetricsFlags
+    FontMetricsFlags indicate when certain metrics are valid;
+    the underline or strikeout metrics may be valid and zero.
+    Fonts with embedded bitmaps may not have valid underline or strikeout metrics.
+    */
+    FontMetricsFlags :: enum u32 {
+        UnderlineThicknessIsValid_Flag :: 1;
+        UnderlinePositionIsValid_Flag  :: 2;
+        StrikeoutThicknessIsValid_Flag :: 4;
+        StrikeoutPositionIsValid_Flag  :: 8;
+        BoundsInvalid_Flag             :: 16;
+
+        kUnderlineThicknessIsValid_Flag :: UnderlineThicknessIsValid_Flag;
+        kUnderlinePositionIsValid_Flag  :: UnderlinePositionIsValid_Flag;
+        kStrikeoutThicknessIsValid_Flag :: StrikeoutThicknessIsValid_Flag;
+        kStrikeoutPositionIsValid_Flag  :: StrikeoutPositionIsValid_Flag;
+        kBoundsInvalid_Flag             :: BoundsInvalid_Flag;
+    }
+
+    fFlags:              u32; //!< FontMetricsFlags indicating which metrics are valid
+    fTop:                SkScalar; //!< greatest extent above origin of any glyph bounding box, typically negative; deprecated with variable fonts
+    fAscent:             SkScalar; //!< distance to reserve above baseline, typically negative
+    fDescent:            SkScalar; //!< distance to reserve below baseline, typically positive
+    fBottom:             SkScalar; //!< greatest extent below origin of any glyph bounding box, typically positive; deprecated with variable fonts
+    fLeading:            SkScalar; //!< distance to add between lines, typically positive or zero
+    fAvgCharWidth:       SkScalar; //!< average character width, zero if unknown
+    fMaxCharWidth:       SkScalar; //!< maximum character width, zero if unknown
+    fXMin:               SkScalar; //!< greatest extent to left of origin of any glyph bounding box, typically negative; deprecated with variable fonts
+    fXMax:               SkScalar; //!< greatest extent to right of origin of any glyph bounding box, typically positive; deprecated with variable fonts
+    fXHeight:            SkScalar; //!< height of lower-case 'x', zero if unknown, typically negative
+    fCapHeight:          SkScalar; //!< height of an upper-case letter, zero if unknown, typically negative
+    fUnderlineThickness: SkScalar; //!< underline thickness
+    fUnderlinePosition:  SkScalar; //!< distance from baseline to top of stroke, typically positive
+    fStrikeoutThickness: SkScalar; //!< strikeout thickness
+    fStrikeoutPosition:  SkScalar; //!< distance from baseline to bottom of stroke, typically negative
+
+    /** Returns true if SkFontMetrics has a valid underline thickness, and sets
+    thickness to that value. If the underline thickness is not valid,
+    return false, and ignore thickness.
+    
+    @param thickness  storage for underline width
+    @return           true if font specifies underline width
+    */
+//     hasUnderlineThickness :: (this: *SkFontMetrics, thickness: *SkScalar) -> bool #cpp_method #foreign libskia "_ZNK13SkFontMetrics21hasUnderlineThicknessEPf";
+
+    /** Returns true if SkFontMetrics has a valid underline position, and sets
+    position to that value. If the underline position is not valid,
+    return false, and ignore position.
+    
+    @param position  storage for underline position
+    @return          true if font specifies underline position
+    */
+//     hasUnderlinePosition :: (this: *SkFontMetrics, position: *SkScalar) -> bool #cpp_method #foreign libskia "_ZNK13SkFontMetrics20hasUnderlinePositionEPf";
+
+    /** Returns true if SkFontMetrics has a valid strikeout thickness, and sets
+    thickness to that value. If the underline thickness is not valid,
+    return false, and ignore thickness.
+    
+    @param thickness  storage for strikeout width
+    @return           true if font specifies strikeout width
+    */
+//     hasStrikeoutThickness :: (this: *SkFontMetrics, thickness: *SkScalar) -> bool #cpp_method #foreign libskia "_ZNK13SkFontMetrics21hasStrikeoutThicknessEPf";
+
+    /** Returns true if SkFontMetrics has a valid strikeout position, and sets
+    position to that value. If the underline position is not valid,
+    return false, and ignore position.
+    
+    @param position  storage for strikeout position
+    @return          true if font specifies strikeout position
+    */
+//     hasStrikeoutPosition :: (this: *SkFontMetrics, position: *SkScalar) -> bool #cpp_method #foreign libskia "_ZNK13SkFontMetrics20hasStrikeoutPositionEPf";
+
+    /** Returns true if SkFontMetrics has a valid fTop, fBottom, fXMin, and fXMax.
+    If the bounds are not valid, return false.
+    
+    @return        true if font specifies maximum glyph bounds
+    */
+//     hasBounds :: (this: *SkFontMetrics) -> bool #cpp_method #foreign libskia "_ZNK13SkFontMetrics9hasBoundsEv";
+}
+
+// operator_eq :: (this: *SkFontMetrics, that: *SkFontMetrics) -> bool #cpp_method #foreign libskia "_ZNK13SkFontMetricseqERKS_";
+operator_eq :: (this: SkFontMetrics, that: SkFontMetrics) -> bool #no_context {
+    return operator_eq(*this, *that);
+}
+
+SkFontStyleSet :: struct {
+    vtable:                    *SkFontStyleSet_VTable;
+    using skfontstyleset__raw: SkFontStyleSet__RAW;
+    #place vtable; #as skrefcnt: SkRefCnt; // Support cast to SkRefCnt
+}
+// SkFontStyleSet without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkFontStyleSet
+SkFontStyleSet__RAW :: struct {
+    using skrefcnt__raw: SkRefCnt__RAW;
+
+    CreateEmpty :: () -> sk_sp(SkFontStyleSet) #cpp_return_type_is_non_pod #foreign libskia "_ZN14SkFontStyleSet11CreateEmptyEv";
+
+    matchStyleCSS3 :: (this: *SkFontStyleSet, pattern: *SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZN14SkFontStyleSet14matchStyleCSS3ERK11SkFontStyle";
+    matchStyleCSS3 :: (this: *SkFontStyleSet, pattern: SkFontStyle) -> sk_sp(SkTypeface) #no_context {
+        return matchStyleCSS3(this, *pattern);
+    }
+
+    // Virtual functions:
+    // Normally you should call them via the vtable.
+    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+    // or need to create a vtable yourself.
+
+//     virtual_count :: (this: *SkFontStyleSet) -> s32 #cpp_method #foreign libskia "_ZN14SkFontStyleSet5countEv";
+//     virtual_getStyle :: (this: *SkFontStyleSet, index: s32, unknown0: *SkFontStyle, style: *SkString) -> void #cpp_method #foreign libskia "_ZN14SkFontStyleSet8getStyleEiP11SkFontStyleP8SkString";
+//     virtual_createTypeface :: (this: *SkFontStyleSet, index: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZN14SkFontStyleSet14createTypefaceEi";
+//     virtual_matchStyle :: (this: *SkFontStyleSet, pattern: *SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZN14SkFontStyleSet10matchStyleERK11SkFontStyle";
+}
+SkFontStyleSet_VTable :: struct #type_info_none {
+    using vtable:   SkRefCntBase_VTable;
+
+    count:          #type (this: *SkFontStyleSet) -> s32 #cpp_method;
+    getStyle:       #type (this: *SkFontStyleSet, index: s32, unknown0: *SkFontStyle, style: *SkString) -> void #cpp_method;
+    createTypeface: #type (this: *SkFontStyleSet, index: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+    matchStyle:     #type (this: *SkFontStyleSet, pattern: *SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+}
+SkFontStyleSet_count :: inline (this: *SkFontStyleSet) -> s32 { return this.vtable.count(this); }
+SkFontStyleSet_getStyle :: inline (this: *SkFontStyleSet, index: s32, unknown0: *SkFontStyle, style: *SkString) { this.vtable.getStyle(this, index, unknown0, style); }
+SkFontStyleSet_createTypeface :: inline (this: *SkFontStyleSet, index: s32) -> sk_sp(SkTypeface) { return this.vtable.createTypeface(this, index); }
+SkFontStyleSet_matchStyle :: inline (this: *SkFontStyleSet, pattern: *SkFontStyle) -> sk_sp(SkTypeface) { return this.vtable.matchStyle(this, pattern); }
+
+get_vtable :: (obj: *SkFontStyleSet) -> *SkFontStyleSet_VTable { return obj.vtable; }
+
+
+SkFontMgr :: struct {
+    vtable:               *SkFontMgr_VTable;
+    using skfontmgr__raw: SkFontMgr__RAW;
+    #place vtable; #as skrefcnt: SkRefCnt; // Support cast to SkRefCnt
+}
+// SkFontMgr without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkFontMgr
+SkFontMgr__RAW :: struct {
+    using skrefcnt__raw: SkRefCnt__RAW;
+
+    countFamilies :: (this: *SkFontMgr) -> s32 #cpp_method #foreign libskia "_ZNK9SkFontMgr13countFamiliesEv";
+    getFamilyName :: (this: *SkFontMgr, index: s32, familyName: *SkString) -> void #cpp_method #foreign libskia "_ZNK9SkFontMgr13getFamilyNameEiP8SkString";
+    createStyleSet :: (this: *SkFontMgr, index: s32) -> sk_sp(SkFontStyleSet) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr14createStyleSetEi";
+
+    /**
+    *  The caller must call unref() on the returned object.
+    *  Never returns NULL; will return an empty set if the name is not found.
+    *
+    *  Passing nullptr as the parameter will return the default system family.
+    *  Note that most systems don't have a default system family, so passing nullptr will often
+    *  result in the empty set.
+    *
+    *  It is possible that this will return a style set not accessible from
+    *  createStyleSet(int) due to hidden or auto-activated fonts.
+    */
+    matchFamily :: (this: *SkFontMgr, familyName: *u8) -> sk_sp(SkFontStyleSet) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr11matchFamilyEPKc";
+
+    /**
+    *  Find the closest matching typeface to the specified familyName and style
+    *  and return a ref to it. The caller must call unref() on the returned
+    *  object. Will return nullptr if no 'good' match is found.
+    *
+    *  Passing |nullptr| as the parameter for |familyName| will return the
+    *  default system font.
+    *
+    *  It is possible that this will return a style set not accessible from
+    *  createStyleSet(int) or matchFamily(const char[]) due to hidden or
+    *  auto-activated fonts.
+    */
+    matchFamilyStyle :: (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr16matchFamilyStyleEPKcRK11SkFontStyle";
+    matchFamilyStyle :: (this: *SkFontMgr, familyName: *u8, unknown0: SkFontStyle) -> sk_sp(SkTypeface) #no_context {
+        return matchFamilyStyle(this, familyName, *unknown0);
+    }
+
+    /**
+    *  Use the system fallback to find a typeface for the given character.
+    *  Note that bcp47 is a combination of ISO 639, 15924, and 3166-1 codes,
+    *  so it is fine to just pass a ISO 639 here.
+    *
+    *  Will return NULL if no family can be found for the character
+    *  in the system fallback.
+    *
+    *  Passing |nullptr| as the parameter for |familyName| will return the
+    *  default system font.
+    *
+    *  bcp47[0] is the least significant fallback, bcp47[bcp47Count-1] is the
+    *  most significant. If no specified bcp47 codes match, any font with the
+    *  requested character will be matched.
+    */
+    matchFamilyStyleCharacter :: (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle, bcp47: **u8, bcp47Count: s32, character: SkUnichar) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr25matchFamilyStyleCharacterEPKcRK11SkFontStylePS1_ii";
+    matchFamilyStyleCharacter :: (this: *SkFontMgr, familyName: *u8, unknown0: SkFontStyle, bcp47: **u8, bcp47Count: s32, character: SkUnichar) -> sk_sp(SkTypeface) #no_context {
+        return matchFamilyStyleCharacter(this, familyName, *unknown0, bcp47, bcp47Count, character);
+    }
+
+    /**
+    *  Create a typeface for the specified data and TTC index (pass 0 for none)
+    *  or NULL if the data is not recognized. The caller must call unref() on
+    *  the returned object if it is not null.
+    */
+    makeFromData :: (this: *SkFontMgr, unknown0: sk_sp(SkData), ttcIndex: s32 = 0) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr12makeFromDataE5sk_spI6SkDataEi";
+
+    /**
+    *  Create a typeface for the specified stream and TTC index
+    *  (pass 0 for none) or NULL if the stream is not recognized. The caller
+    *  must call unref() on the returned object if it is not null.
+    */
+    makeFromStream :: (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), ttcIndex: s32 = 0) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr14makeFromStreamESt10unique_ptrI13SkStreamAssetSt14default_deleteIS1_EEi";
+
+    /* Experimental, API subject to change. */
+    makeFromStream :: (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), unknown1: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr14makeFromStreamESt10unique_ptrI13SkStreamAssetSt14default_deleteIS1_EERK15SkFontArguments";
+    makeFromStream :: (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), unknown1: SkFontArguments) -> sk_sp(SkTypeface) #no_context {
+        return makeFromStream(this, unknown0, *unknown1);
+    }
+
+    /**
+    *  Create a typeface for the specified fileName and TTC index
+    *  (pass 0 for none) or NULL if the file is not found, or its contents are
+    *  not recognized. The caller must call unref() on the returned object
+    *  if it is not null.
+    */
+    makeFromFile :: (this: *SkFontMgr, path: *u8, ttcIndex: s32 = 0) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr12makeFromFileEPKci";
+
+    legacyMakeTypeface :: (this: *SkFontMgr, familyName: *u8, style: SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr18legacyMakeTypefaceEPKc11SkFontStyle";
+
+    /* Returns an empty font manager without any typeface dependencies */
+    RefEmpty :: () -> sk_sp(SkFontMgr) #cpp_return_type_is_non_pod #foreign libskia "_ZN9SkFontMgr8RefEmptyEv";
+
+    // Virtual functions:
+    // Normally you should call them via the vtable.
+    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+    // or need to create a vtable yourself.
+
+//     virtual_onCountFamilies :: (this: *SkFontMgr) -> s32 #cpp_method #foreign libskia "_ZNK9SkFontMgr15onCountFamiliesEv";
+//     virtual_onGetFamilyName :: (this: *SkFontMgr, index: s32, familyName: *SkString) -> void #cpp_method #foreign libskia "_ZNK9SkFontMgr15onGetFamilyNameEiP8SkString";
+//     virtual_onCreateStyleSet :: (this: *SkFontMgr, index: s32) -> sk_sp(SkFontStyleSet) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr16onCreateStyleSetEi";
+
+    /** May return NULL if the name is not found. */
+//     virtual_onMatchFamily :: (this: *SkFontMgr, familyName: *u8) -> sk_sp(SkFontStyleSet) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr13onMatchFamilyEPKc";
+
+//     virtual_onMatchFamilyStyle :: (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr18onMatchFamilyStyleEPKcRK11SkFontStyle";
+
+//     virtual_onMatchFamilyStyleCharacter :: (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle, bcp47: **u8, bcp47Count: s32, character: SkUnichar) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr27onMatchFamilyStyleCharacterEPKcRK11SkFontStylePS1_ii";
+
+//     virtual_onMakeFromData :: (this: *SkFontMgr, unknown0: sk_sp(SkData), ttcIndex: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr14onMakeFromDataE5sk_spI6SkDataEi";
+//     virtual_onMakeFromStreamIndex :: (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), ttcIndex: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr21onMakeFromStreamIndexESt10unique_ptrI13SkStreamAssetSt14default_deleteIS1_EEi";
+
+//     virtual_onMakeFromStreamArgs :: (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), unknown1: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr20onMakeFromStreamArgsESt10unique_ptrI13SkStreamAssetSt14default_deleteIS1_EERK15SkFontArguments";
+
+//     virtual_onMakeFromFile :: (this: *SkFontMgr, path: *u8, ttcIndex: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr14onMakeFromFileEPKci";
+
+//     virtual_onLegacyMakeTypeface :: (this: *SkFontMgr, familyName: *u8, unknown0: SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK9SkFontMgr20onLegacyMakeTypefaceEPKc11SkFontStyle";
+}
+SkFontMgr_VTable :: struct #type_info_none {
+    using vtable:                SkRefCntBase_VTable;
+
+    onCountFamilies:             #type (this: *SkFontMgr) -> s32 #cpp_method;
+    onGetFamilyName:             #type (this: *SkFontMgr, index: s32, familyName: *SkString) -> void #cpp_method;
+    onCreateStyleSet:            #type (this: *SkFontMgr, index: s32) -> sk_sp(SkFontStyleSet) #cpp_method #cpp_return_type_is_non_pod;
+
+    onMatchFamily:               #type (this: *SkFontMgr, familyName: *u8) -> sk_sp(SkFontStyleSet) #cpp_method #cpp_return_type_is_non_pod;
+
+    onMatchFamilyStyle:          #type (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+
+    onMatchFamilyStyleCharacter: #type (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle, bcp47: **u8, bcp47Count: s32, character: SkUnichar) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+
+    onMakeFromData:              #type (this: *SkFontMgr, unknown0: sk_sp(SkData), ttcIndex: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+    onMakeFromStreamIndex:       #type (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), ttcIndex: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+
+    onMakeFromStreamArgs:        #type (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), unknown1: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+
+    onMakeFromFile:              #type (this: *SkFontMgr, path: *u8, ttcIndex: s32) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+
+    onLegacyMakeTypeface:        #type (this: *SkFontMgr, familyName: *u8, unknown0: SkFontStyle) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
+}
+SkFontMgr_onCountFamilies :: inline (this: *SkFontMgr) -> s32 { return this.vtable.onCountFamilies(this); }
+SkFontMgr_onGetFamilyName :: inline (this: *SkFontMgr, index: s32, familyName: *SkString) { this.vtable.onGetFamilyName(this, index, familyName); }
+SkFontMgr_onCreateStyleSet :: inline (this: *SkFontMgr, index: s32) -> sk_sp(SkFontStyleSet) { return this.vtable.onCreateStyleSet(this, index); }
+
+SkFontMgr_onMatchFamily :: inline (this: *SkFontMgr, familyName: *u8) -> sk_sp(SkFontStyleSet) { return this.vtable.onMatchFamily(this, familyName); }
+
+SkFontMgr_onMatchFamilyStyle :: inline (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle) -> sk_sp(SkTypeface) { return this.vtable.onMatchFamilyStyle(this, familyName, unknown0); }
+
+SkFontMgr_onMatchFamilyStyleCharacter :: inline (this: *SkFontMgr, familyName: *u8, unknown0: *SkFontStyle, bcp47: **u8, bcp47Count: s32, character: SkUnichar) -> sk_sp(SkTypeface) { return this.vtable.onMatchFamilyStyleCharacter(this, familyName, unknown0, bcp47, bcp47Count, character); }
+
+SkFontMgr_onMakeFromData :: inline (this: *SkFontMgr, unknown0: sk_sp(SkData), ttcIndex: s32) -> sk_sp(SkTypeface) { return this.vtable.onMakeFromData(this, unknown0, ttcIndex); }
+SkFontMgr_onMakeFromStreamIndex :: inline (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), ttcIndex: s32) -> sk_sp(SkTypeface) { return this.vtable.onMakeFromStreamIndex(this, unknown0, ttcIndex); }
+
+SkFontMgr_onMakeFromStreamArgs :: inline (this: *SkFontMgr, unknown0: std.unique_ptr(SkStreamAsset), unknown1: *SkFontArguments) -> sk_sp(SkTypeface) { return this.vtable.onMakeFromStreamArgs(this, unknown0, unknown1); }
+
+SkFontMgr_onMakeFromFile :: inline (this: *SkFontMgr, path: *u8, ttcIndex: s32) -> sk_sp(SkTypeface) { return this.vtable.onMakeFromFile(this, path, ttcIndex); }
+
+SkFontMgr_onLegacyMakeTypeface :: inline (this: *SkFontMgr, familyName: *u8, unknown0: SkFontStyle) -> sk_sp(SkTypeface) { return this.vtable.onLegacyMakeTypeface(this, familyName, unknown0); }
+
+get_vtable :: (obj: *SkFontMgr) -> *SkFontMgr_VTable { return obj.vtable; }
+
+
+GrDirectContext :: struct {}
+
+SkImageGenerator :: struct {}
+
+SkMipmap :: struct {}
+
+SkTextureCompressionType :: enum s32 {
+}
+
+SkImages :: struct {
+    /** Caller data passed to RasterReleaseProc; may be nullptr. */
+    ReleaseContext :: *void;
+
+    /** Function called when SkImage no longer shares pixels. ReleaseContext is
+    provided by caller when SkImage is created, and may be nullptr.
+    */
+    RasterReleaseProc :: #type (pixels: *void, unknown0: ReleaseContext) -> void #c_call;
+
+    /** Creates a CPU-backed SkImage from bitmap, sharing or copying bitmap pixels. If the bitmap
+    is marked immutable, and its pixel memory is shareable, it may be shared
+    instead of copied.
+    
+    SkImage is returned if bitmap is valid. Valid SkBitmap parameters include:
+    dimensions are greater than zero;
+    each dimension fits in 29 bits;
+    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
+    row bytes are large enough to hold one row of pixels;
+    pixel address is not nullptr.
+    
+    @param bitmap  SkImageInfo, row bytes, and pixels
+    @return        created SkImage, or nullptr
+    */
+    RasterFromBitmap :: (bitmap: *SkBitmap) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages16RasterFromBitmapERK8SkBitmap";
+    RasterFromBitmap :: (bitmap: SkBitmap) -> sk_sp(SkImage) #no_context {
+        return RasterFromBitmap(*bitmap);
+    }
+
+    /** Creates a CPU-backed SkImage from compressed data.
+    
+    This method will decompress the compressed data and create an image wrapping
+    it. Any mipmap levels present in the compressed data are discarded.
+    
+    @param data     compressed data to store in SkImage
+    @param width    width of full SkImage
+    @param height   height of full SkImage
+    @param type     type of compression used
+    @return         created SkImage, or nullptr
+    */
+    RasterFromCompressedTextureData :: (data: sk_sp(SkData), width: s32, height: s32, type: SkTextureCompressionType) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages31RasterFromCompressedTextureDataE5sk_spI6SkDataEii24SkTextureCompressionType";
+
+    /**
+    *  Return a SkImage using the encoded data, but attempts to defer decoding until the
+    *  image is actually used/drawn. This deferral allows the system to cache the result, either on the
+    *  CPU or on the GPU, depending on where the image is drawn. If memory is low, the cache may
+    *  be purged, causing the next draw of the image to have to re-decode.
+    *
+    *  If alphaType is nullopt, the image's alpha type will be chosen automatically based on the
+    *  image format. Transparent images will default to kPremul_SkAlphaType. If alphaType contains
+    *  kPremul_SkAlphaType or kUnpremul_SkAlphaType, that alpha type will be used. Forcing opaque
+    *  (passing kOpaque_SkAlphaType) is not allowed, and will return nullptr.
+    *
+    *  If the encoded format is not supported, nullptr is returned.
+    *
+    *  If possible, clients should use SkCodecs::DeferredImage instead.
+    *
+    *  @param encoded  the encoded data
+    *  @return         created SkImage, or nullptr
+    
+    example: https://fiddle.skia.org/c/@Image_DeferredFromEncodedData
+    */
+    DeferredFromEncodedData :: (encoded: sk_sp(SkData), alphaType: std.optional(SkAlphaType)) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages23DeferredFromEncodedDataE5sk_spIK6SkDataESt8optionalI11SkAlphaTypeE";
+
+    /** Creates SkImage from data returned by imageGenerator. The image data will not be created
+    (on either the CPU or GPU) until the image is actually drawn.
+    Generated data is owned by SkImage and may not be shared or accessed.
+    
+    SkImage is returned if generator data is valid. Valid data parameters vary by type of data
+    and platform.
+    
+    imageGenerator may wrap SkPicture data, codec data, or custom data.
+    
+    @param imageGenerator  stock or custom routines to retrieve SkImage
+    @return                created SkImage, or nullptr
+    */
+    DeferredFromGenerator :: (imageGenerator: std.unique_ptr(SkImageGenerator)) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages21DeferredFromGeneratorESt10unique_ptrI16SkImageGeneratorSt14default_deleteIS1_EE";
+
+    BitDepth :: enum s32 {
+        U8  :: 0;
+        F16 :: 1;
+
+        kU8  :: U8;
+        kF16 :: F16;
+    }
+
+    /** Creates SkImage from picture. Returned SkImage width and height are set by dimensions.
+    SkImage draws picture with matrix and paint, set to bitDepth and colorSpace.
+    
+    The Picture data is not turned into an image (CPU or GPU) until it is drawn.
+    
+    If matrix is nullptr, draws with identity SkMatrix. If paint is nullptr, draws
+    with default SkPaint. colorSpace may be nullptr.
+    
+    @param picture     stream of drawing commands
+    @param dimensions  width and height
+    @param matrix      SkMatrix to rotate, scale, translate, and so on; may be nullptr
+    @param paint       SkPaint to apply transparency, filtering, and so on; may be nullptr
+    @param bitDepth    8-bit integer or 16-bit float: per component
+    @param colorSpace  range of colors; may be nullptr
+    @param props       props to use when rasterizing the picture
+    @return            created SkImage, or nullptr
+    */
+    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: *SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace), props: SkSurfaceProps) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages19DeferredFromPictureE5sk_spI9SkPictureERK7SkISizePK8SkMatrixPK7SkPaintNS_8BitDepthES0_I12SkColorSpaceE14SkSurfaceProps";
+    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace), props: SkSurfaceProps) -> sk_sp(SkImage) #no_context {
+        return DeferredFromPicture(picture, *dimensions, matrix, paint, bitDepth, colorSpace, props);
+    }
+
+    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: *SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace)) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages19DeferredFromPictureE5sk_spI9SkPictureERK7SkISizePK8SkMatrixPK7SkPaintNS_8BitDepthES0_I12SkColorSpaceE";
+    DeferredFromPicture :: (picture: sk_sp(SkPicture), dimensions: SkISize, matrix: *SkMatrix, paint: *SkPaint, bitDepth: BitDepth, colorSpace: sk_sp(SkColorSpace)) -> sk_sp(SkImage) #no_context {
+        return DeferredFromPicture(picture, *dimensions, matrix, paint, bitDepth, colorSpace);
+    }
+
+    /** Creates a CPU-backed SkImage from pixmap, copying the pixel data.
+    As a result, pixmap pixels may be modified or deleted without affecting SkImage.
+    
+    SkImage is returned if SkPixmap is valid. Valid SkPixmap parameters include:
+    dimensions are greater than zero;
+    each dimension fits in 29 bits;
+    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
+    row bytes are large enough to hold one row of pixels;
+    pixel address is not nullptr.
+    
+    @param pixmap  SkImageInfo, pixel address, and row bytes
+    @return        copy of SkPixmap pixels, or nullptr
+    
+    example: https://fiddle.skia.org/c/@Image_RasterFromPixmapCopy
+    */
+    RasterFromPixmapCopy :: (pixmap: *SkPixmap) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages20RasterFromPixmapCopyERK8SkPixmap";
+    RasterFromPixmapCopy :: (pixmap: SkPixmap) -> sk_sp(SkImage) #no_context {
+        return RasterFromPixmapCopy(*pixmap);
+    }
+
+    /** Creates CPU-backed SkImage from pixmap, sharing SkPixmap pixels. Pixels must remain valid and
+    unchanged until rasterReleaseProc is called. rasterReleaseProc is passed
+    releaseContext when SkImage is deleted or no longer refers to pixmap pixels.
+    
+    Pass nullptr for rasterReleaseProc to share SkPixmap without requiring a callback
+    when SkImage is released. Pass nullptr for releaseContext if rasterReleaseProc
+    does not require state.
+    
+    SkImage is returned if pixmap is valid. Valid SkPixmap parameters include:
+    dimensions are greater than zero;
+    each dimension fits in 29 bits;
+    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
+    row bytes are large enough to hold one row of pixels;
+    pixel address is not nullptr.
+    
+    @param pixmap             SkImageInfo, pixel address, and row bytes
+    @param rasterReleaseProc  function called when pixels can be released; or nullptr
+    @param releaseContext     state passed to rasterReleaseProc; or nullptr
+    @return                   SkImage sharing pixmap
+    */
+    RasterFromPixmap :: (pixmap: *SkPixmap, rasterReleaseProc: RasterReleaseProc, releaseContext: ReleaseContext) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages16RasterFromPixmapERK8SkPixmapPFvPKvPvES5_";
+    RasterFromPixmap :: (pixmap: SkPixmap, rasterReleaseProc: RasterReleaseProc, releaseContext: ReleaseContext) -> sk_sp(SkImage) #no_context {
+        return RasterFromPixmap(*pixmap, rasterReleaseProc, releaseContext);
+    }
+
+    /** Creates CPU-backed SkImage from pixel data described by info.
+    The pixels data will *not* be copied.
+    
+    SkImage is returned if SkImageInfo is valid. Valid SkImageInfo parameters include:
+    dimensions are greater than zero;
+    each dimension fits in 29 bits;
+    SkColorType and SkAlphaType are valid, and SkColorType is not kUnknown_SkColorType;
+    rowBytes are large enough to hold one row of pixels;
+    pixels is not nullptr, and contains enough data for SkImage.
+    
+    @param info      contains width, height, SkAlphaType, SkColorType, SkColorSpace
+    @param pixels    address or pixel storage
+    @param rowBytes  size of pixel row or larger
+    @return          SkImage sharing pixels, or nullptr
+    */
+    RasterFromData :: (info: *SkImageInfo, pixels: sk_sp(SkData), rowBytes: u64) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages14RasterFromDataERK11SkImageInfo5sk_spI6SkDataEm";
+    RasterFromData :: (info: SkImageInfo, pixels: sk_sp(SkData), rowBytes: u64) -> sk_sp(SkImage) #no_context {
+        return RasterFromData(*info, pixels, rowBytes);
+    }
+
+    /** Creates a filtered SkImage on the CPU. filter processes the src image, potentially changing
+    the color, position, and size. subset is the bounds of src that are processed
+    by filter. clipBounds is the expected bounds of the filtered SkImage. outSubset
+    is required storage for the actual bounds of the filtered SkImage. offset is
+    required storage for translation of returned SkImage.
+    
+    Returns nullptr a filtered result could not be created. If nullptr is returned, outSubset
+    and offset are undefined.
+    
+    Useful for animation of SkImageFilter that varies size from frame to frame.
+    outSubset describes the valid bounds of returned image. offset translates the returned SkImage
+    to keep subsequent animation frames aligned with respect to each other.
+    
+    @param src         the image to be filtered
+    @param filter      the image filter to be applied
+    @param subset      bounds of SkImage processed by filter
+    @param clipBounds  expected bounds of filtered SkImage
+    @param outSubset   storage for returned SkImage bounds
+    @param offset      storage for returned SkImage translation
+    @return            filtered SkImage, or nullptr
+    */
+    MakeWithFilter :: (src: sk_sp(SkImage), filter: *SkImageFilter, subset: *SkIRect, clipBounds: *SkIRect, outSubset: *SkIRect, offset: *SkIPoint) -> sk_sp(SkImage) #cpp_return_type_is_non_pod #foreign libskia "_ZN8SkImages14MakeWithFilterE5sk_spI7SkImageEPK13SkImageFilterRK7SkIRectS8_PS6_P8SkIPoint";
+    MakeWithFilter :: (src: sk_sp(SkImage), filter: *SkImageFilter, subset: SkIRect, clipBounds: SkIRect, outSubset: *SkIRect, offset: *SkIPoint) -> sk_sp(SkImage) #no_context {
+        return MakeWithFilter(src, filter, *subset, *clipBounds, outSubset, offset);
+    }
+}
+
+/** \class SkImage
+SkImage describes a two dimensional array of pixels to draw. The pixels may be
+decoded in a raster bitmap, encoded in a SkPicture or compressed data stream,
+or located in GPU memory as a GPU texture.
+
+SkImage cannot be modified after it is created. SkImage may allocate additional
+storage as needed; for instance, an encoded SkImage may decode when drawn.
+
+SkImage width and height are greater than zero. Creating an SkImage with zero width
+or height returns SkImage equal to nullptr.
+
+SkImage may be created from SkBitmap, SkPixmap, SkSurface, SkPicture, encoded streams,
+GPU texture, YUV_ColorSpace data, or hardware buffer. Encoded streams supported
+include BMP, GIF, HEIF, ICO, JPEG, PNG, WBMP, WebP. Supported encoding details
+vary with platform.
+
+See SkImages namespace for the static factory methods to make SkImages.
+
+Clients should *not* subclass SkImage as there is a lot of internal machinery that is
+not publicly accessible.
+*/
+SkImage :: struct {
+    vtable:             *SkImage_VTable;
+    using skimage__raw: SkImage__RAW;
+    #place vtable; #as skrefcnt: SkRefCnt; // Support cast to SkRefCnt
+}
+// SkImage without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkImage
+SkImage__RAW :: struct {
+    using skrefcnt__raw: SkRefCnt__RAW;
+
+    /** Returns a SkImageInfo describing the width, height, color type, alpha type, and color space
+    of the SkImage.
+    
+    @return  image info of SkImage.
+    */
+//     imageInfo :: (this: *SkImage) -> *SkImageInfo #cpp_method #foreign libskia "_ZNK7SkImage9imageInfoEv";
+
+    /** Returns pixel count in each row.
+    
+    @return  pixel width in SkImage
+    */
+//     width :: (this: *SkImage) -> s32 #cpp_method #foreign libskia "_ZNK7SkImage5widthEv";
+
+    /** Returns pixel row count.
+    
+    @return  pixel height in SkImage
+    */
+//     height :: (this: *SkImage) -> s32 #cpp_method #foreign libskia "_ZNK7SkImage6heightEv";
+
+    /** Returns SkISize { width(), height() }.
+    
+    @return  integral size of width() and height()
+    */
+//     dimensions :: (this: *SkImage) -> SkISize #cpp_method #foreign libskia "_ZNK7SkImage10dimensionsEv";
+
+    /** Returns SkIRect { 0, 0, width(), height() }.
+    
+    @return  integral rectangle from origin to width() and height()
+    */
+//     bounds :: (this: *SkImage) -> SkIRect #cpp_method #foreign libskia "_ZNK7SkImage6boundsEv";
+
+    /** Returns value unique to image. SkImage contents cannot change after SkImage is
+    created. Any operation to create a new SkImage will receive generate a new
+    unique number.
+    
+    @return  unique identifier
+    */
+//     uniqueID :: (this: *SkImage) -> u32 #cpp_method #foreign libskia "_ZNK7SkImage8uniqueIDEv";
+
+    /** Returns SkAlphaType.
+    
+    SkAlphaType returned was a parameter to an SkImage constructor,
+    or was parsed from encoded data.
+    
+    @return  SkAlphaType in SkImage
+    
+    example: https://fiddle.skia.org/c/@Image_alphaType
+    */
+    alphaType :: (this: *SkImage) -> SkAlphaType #cpp_method #foreign libskia "_ZNK7SkImage9alphaTypeEv";
+
+    /** Returns SkColorType if known; otherwise, returns kUnknown_SkColorType.
+    
+    @return  SkColorType of SkImage
+    
+    example: https://fiddle.skia.org/c/@Image_colorType
+    */
+    colorType :: (this: *SkImage) -> SkColorType #cpp_method #foreign libskia "_ZNK7SkImage9colorTypeEv";
+
+    /** Returns SkColorSpace, the range of colors, associated with SkImage.  The
+    reference count of SkColorSpace is unchanged. The returned SkColorSpace is
+    immutable.
+    
+    SkColorSpace returned was passed to an SkImage constructor,
+    or was parsed from encoded data. SkColorSpace returned may be ignored when SkImage
+    is drawn, depending on the capabilities of the SkSurface receiving the drawing.
+    
+    @return  SkColorSpace in SkImage, or nullptr
+    
+    example: https://fiddle.skia.org/c/@Image_colorSpace
+    */
+    colorSpace :: (this: *SkImage) -> *SkColorSpace #cpp_method #foreign libskia "_ZNK7SkImage10colorSpaceEv";
+
+    /** Returns a smart pointer to SkColorSpace, the range of colors, associated with
+    SkImage.  The smart pointer tracks the number of objects sharing this
+    SkColorSpace reference so the memory is released when the owners destruct.
+    
+    The returned SkColorSpace is immutable.
+    
+    SkColorSpace returned was passed to an SkImage constructor,
+    or was parsed from encoded data. SkColorSpace returned may be ignored when SkImage
+    is drawn, depending on the capabilities of the SkSurface receiving the drawing.
+    
+    @return  SkColorSpace in SkImage, or nullptr, wrapped in a smart pointer
+    
+    example: https://fiddle.skia.org/c/@Image_refColorSpace
+    */
+    refColorSpace :: (this: *SkImage) -> sk_sp(SkColorSpace) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13refColorSpaceEv";
+
+    /** Returns true if SkImage pixels represent transparency only. If true, each pixel
+    is packed in 8 bits as defined by kAlpha_8_SkColorType.
+    
+    @return  true if pixels represent a transparency mask
+    
+    example: https://fiddle.skia.org/c/@Image_isAlphaOnly
+    */
+    isAlphaOnly :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage11isAlphaOnlyEv";
+
+    /** Returns true if pixels ignore their alpha value and are treated as fully opaque.
+    
+    @return  true if SkAlphaType is kOpaque_SkAlphaType
+    */
+//     isOpaque :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage8isOpaqueEv";
+
+    /**
+    *  Make a shader with the specified tiling and mipmap sampling.
+    */
+    makeShader :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: /*const reference*/ *SkSamplingOptions, localMatrix: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderE10SkTileModeS0_RK17SkSamplingOptionsPK8SkMatrix";
+    makeShader :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: SkSamplingOptions, localMatrix: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
+        return makeShader(this, tmx, tmy, *unknown0, localMatrix);
+    }
+
+    makeShader_1 :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderE10SkTileModeS0_RK17SkSamplingOptionsRK8SkMatrix";
+    makeShader_1 :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
+        return makeShader_1(this, tmx, tmy, *sampling, *lm);
+    }
+
+    /** Defaults to clamp in both X and Y. */
+    makeShader :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderERK17SkSamplingOptionsRK8SkMatrix";
+    makeShader :: (this: *SkImage, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
+        return makeShader(this, *sampling, *lm);
+    }
+    makeShader_1 :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeShaderERK17SkSamplingOptionsPK8SkMatrix";
+    makeShader_1 :: (this: *SkImage, sampling: SkSamplingOptions, lm: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
+        return makeShader_1(this, *sampling, lm);
+    }
+
+    /**
+    *  makeRawShader functions like makeShader, but for images that contain non-color data.
+    *  This includes images encoding things like normals, material properties (eg, roughness),
+    *  heightmaps, or any other purely mathematical data that happens to be stored in an image.
+    *  These types of images are useful with some programmable shaders (see: SkRuntimeEffect).
+    *
+    *  Raw image shaders work like regular image shaders (including filtering and tiling), with
+    *  a few major differences:
+    *    - No color space transformation is ever applied (the color space of the image is ignored).
+    *    - Images with an alpha type of kUnpremul are *not* automatically premultiplied.
+    *    - Bicubic filtering is not supported. If SkSamplingOptions::useCubic is true, these
+    *      factories will return nullptr.
+    */
+    makeRawShader :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: /*const reference*/ *SkSamplingOptions, localMatrix: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderE10SkTileModeS0_RK17SkSamplingOptionsPK8SkMatrix";
+    makeRawShader :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, unknown0: SkSamplingOptions, localMatrix: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
+        return makeRawShader(this, tmx, tmy, *unknown0, localMatrix);
+    }
+
+    makeRawShader_1 :: (this: /*const*/ *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderE10SkTileModeS0_RK17SkSamplingOptionsRK8SkMatrix";
+    makeRawShader_1 :: (this: *SkImage, tmx: SkTileMode, tmy: SkTileMode, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
+        return makeRawShader_1(this, tmx, tmy, *sampling, *lm);
+    }
+
+    /** Defaults to clamp in both X and Y. */
+    makeRawShader :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const reference*/ *SkMatrix) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderERK17SkSamplingOptionsRK8SkMatrix";
+    makeRawShader :: (this: *SkImage, sampling: SkSamplingOptions, lm: SkMatrix) -> sk_sp(SkShader) #no_context {
+        return makeRawShader(this, *sampling, *lm);
+    }
+    makeRawShader_1 :: (this: /*const*/ *SkImage, sampling: /*const reference*/ *SkSamplingOptions, lm: /*const*/ *SkMatrix = null) -> sk_sp(SkShader) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage13makeRawShaderERK17SkSamplingOptionsPK8SkMatrix";
+    makeRawShader_1 :: (this: *SkImage, sampling: SkSamplingOptions, lm: *SkMatrix = null) -> sk_sp(SkShader) #no_context {
+        return makeRawShader_1(this, *sampling, lm);
+    }
+
+    /** Copies SkImage pixel address, row bytes, and SkImageInfo to pixmap, if address
+    is available, and returns true. If pixel address is not available, return
+    false and leave pixmap unchanged.
+    
+    @param pixmap  storage for pixel state if pixels are readable; otherwise, ignored
+    @return        true if SkImage has direct access to pixels
+    
+    example: https://fiddle.skia.org/c/@Image_peekPixels
+    */
+    peekPixels :: (this: *SkImage, pixmap: *SkPixmap) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10peekPixelsEP8SkPixmap";
+
+    /** \enum SkImage::CachingHint
+    CachingHint selects whether Skia may internally cache SkBitmap generated by
+    decoding SkImage, or by copying SkImage from GPU to CPU. The default behavior
+    allows caching SkBitmap.
+    
+    Choose kDisallow_CachingHint if SkImage pixels are to be used only once, or
+    if SkImage pixels reside in a cache outside of Skia, or to reduce memory pressure.
+    
+    Choosing kAllow_CachingHint does not ensure that pixels will be cached.
+    SkImage pixels may not be cached if memory requirements are too large or
+    pixels are not accessible.
+    */
+    CachingHint :: enum u32 {
+        Allow_CachingHint    :: 0;
+        Disallow_CachingHint :: 1;
+
+        kAllow_CachingHint    :: Allow_CachingHint;
+        kDisallow_CachingHint :: Disallow_CachingHint;
+    }
+
+    /** Copies SkRect of pixels from SkImage to dstPixels. Copy starts at offset (srcX, srcY),
+    and does not exceed SkImage (width(), height()).
+    
+    Graphite has deprecated this API in favor of the equivalent asynchronous API on
+    skgpu::graphite::Context (with an optional explicit synchonization).
+    
+    dstInfo specifies width, height, SkColorType, SkAlphaType, and SkColorSpace of
+    destination. dstRowBytes specifies the gap from one destination row to the next.
+    Returns true if pixels are copied. Returns false if:
+    - dstInfo.addr() equals nullptr
+    - dstRowBytes is less than dstInfo.minRowBytes()
+    - SkPixelRef is nullptr
+    
+    Pixels are copied only if pixel conversion is possible. If SkImage SkColorType is
+    kGray_8_SkColorType, or kAlpha_8_SkColorType; dstInfo.colorType() must match.
+    If SkImage SkColorType is kGray_8_SkColorType, dstInfo.colorSpace() must match.
+    If SkImage SkAlphaType is kOpaque_SkAlphaType, dstInfo.alphaType() must
+    match. If SkImage SkColorSpace is nullptr, dstInfo.colorSpace() must match. Returns
+    false if pixel conversion is not possible.
+    
+    srcX and srcY may be negative to copy only top or left of source. Returns
+    false if width() or height() is zero or negative.
+    Returns false if abs(srcX) >= Image width(), or if abs(srcY) >= Image height().
+    
+    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
+    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
+    
+    @param context      the GrDirectContext in play, if it exists
+    @param dstInfo      destination width, height, SkColorType, SkAlphaType, SkColorSpace
+    @param dstPixels    destination pixel storage
+    @param dstRowBytes  destination row length
+    @param srcX         column index whose absolute value is less than width()
+    @param srcY         row index whose absolute value is less than height()
+    @param cachingHint  whether the pixels should be cached locally
+    @return             true if pixels are copied to dstPixels
+    */
+    readPixels :: (this: *SkImage, _context: *GrDirectContext, dstInfo: *SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsEP15GrDirectContextRK11SkImageInfoPvmiiNS_11CachingHintE";
+    readPixels :: (this: *SkImage, _context: *GrDirectContext, dstInfo: SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
+        return readPixels(this, _context, *dstInfo, dstPixels, dstRowBytes, srcX, srcY, cachingHint);
+    }
+
+    /** Copies a SkRect of pixels from SkImage to dst. Copy starts at (srcX, srcY), and
+    does not exceed SkImage (width(), height()).
+    
+    Graphite has deprecated this API in favor of the equivalent asynchronous API on
+    skgpu::graphite::Context (with an optional explicit synchonization).
+    
+    dst specifies width, height, SkColorType, SkAlphaType, SkColorSpace, pixel storage,
+    and row bytes of destination. dst.rowBytes() specifics the gap from one destination
+    row to the next. Returns true if pixels are copied. Returns false if:
+    - dst pixel storage equals nullptr
+    - dst.rowBytes is less than SkImageInfo::minRowBytes
+    - SkPixelRef is nullptr
+    
+    Pixels are copied only if pixel conversion is possible. If SkImage SkColorType is
+    kGray_8_SkColorType, or kAlpha_8_SkColorType; dst.colorType() must match.
+    If SkImage SkColorType is kGray_8_SkColorType, dst.colorSpace() must match.
+    If SkImage SkAlphaType is kOpaque_SkAlphaType, dst.alphaType() must
+    match. If SkImage SkColorSpace is nullptr, dst.colorSpace() must match. Returns
+    false if pixel conversion is not possible.
+    
+    srcX and srcY may be negative to copy only top or left of source. Returns
+    false if width() or height() is zero or negative.
+    Returns false if abs(srcX) >= Image width(), or if abs(srcY) >= Image height().
+    
+    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
+    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
+    
+    @param context      the GrDirectContext in play, if it exists
+    @param dst          destination SkPixmap: SkImageInfo, pixels, row bytes
+    @param srcX         column index whose absolute value is less than width()
+    @param srcY         row index whose absolute value is less than height()
+    @param cachingHint  whether the pixels should be cached locallyZ
+    @return             true if pixels are copied to dst
+    */
+    readPixels :: (this: *SkImage, _context: *GrDirectContext, dst: *SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsEP15GrDirectContextRK8SkPixmapiiNS_11CachingHintE";
+    readPixels :: (this: *SkImage, _context: *GrDirectContext, dst: SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
+        return readPixels(this, _context, *dst, srcX, srcY, cachingHint);
+    }
+
+    /** Deprecated. Use the variants that accept a GrDirectContext. */
+    readPixels :: (this: *SkImage, dstInfo: *SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsERK11SkImageInfoPvmiiNS_11CachingHintE";
+    readPixels :: (this: *SkImage, dstInfo: SkImageInfo, dstPixels: *void, dstRowBytes: u64, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
+        return readPixels(this, *dstInfo, dstPixels, dstRowBytes, srcX, srcY, cachingHint);
+    }
+
+    readPixels :: (this: *SkImage, dst: *SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10readPixelsERK8SkPixmapiiNS_11CachingHintE";
+    readPixels :: (this: *SkImage, dst: SkPixmap, srcX: s32, srcY: s32, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
+        return readPixels(this, *dst, srcX, srcY, cachingHint);
+    }
+
+    /** The result from asyncRescaleAndReadPixels() or asyncRescaleAndReadPixelsYUV420(). */
+    AsyncReadResult :: struct {
+        vtable: *AsyncReadResult_VTable;
+
+//         CopyConstructor :: (this: *AsyncReadResult, unknown0: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultC2ERKS0_";
+        CopyConstructor :: (this: *AsyncReadResult, unknown0: AsyncReadResult) #no_context {
+            CopyConstructor(this, *unknown0);
+        }
+
+//         Destructor_Base :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultD2Ev";
+
+//         Constructor :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultC2Ev";
+
+        // Virtual functions:
+        // Normally you should call them via the vtable.
+        // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+        // or need to create a vtable yourself.
+
+//         virtual_Destructor :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultD1Ev";
+//         virtual_Destructor_Deleting :: (this: *AsyncReadResult) -> void #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultD0Ev";
+
+        /** Returns how many planes of data are in the result. e.g. 3 for YUV data. */
+//         virtual_count :: (this: *AsyncReadResult) -> s32 #cpp_method #foreign libskia "_ZNK7SkImage15AsyncReadResult5countEv";
+
+        /** Returns the raw pixel data for a given plane.
+        *
+        * It will be organized as per the dst SkImageInfo passed in to the async read call.
+        *
+        * Clients may wish to create an SkPixmap with this data using the dst SkImageInfo
+        * and rowBytes(i).
+        */
+//         virtual_data :: (this: *AsyncReadResult, i: s32) -> *void #cpp_method #foreign libskia "_ZNK7SkImage15AsyncReadResult4dataEi";
+
+        /** Returns how many bytes correspond to a single row of image data */
+//         virtual_rowBytes :: (this: *AsyncReadResult, i: s32) -> u64 #cpp_method #foreign libskia "_ZNK7SkImage15AsyncReadResult8rowBytesEi";
+    }
+    AsyncReadResult_VTable :: struct #type_info_none {
+        Destructor:          #type (this: *SkImage.AsyncReadResult) -> void #cpp_method;
+        Destructor_Deleting: #type (this: *SkImage.AsyncReadResult) -> void #cpp_method;
+
+        count:               #type (this: *SkImage.AsyncReadResult) -> s32 #cpp_method;
+
+        data:                #type (this: *SkImage.AsyncReadResult, i: s32) -> *void #cpp_method;
+
+        rowBytes:            #type (this: *SkImage.AsyncReadResult, i: s32) -> u64 #cpp_method;
+    }
+    AsyncReadResult_Destructor :: inline (this: *AsyncReadResult) { this.vtable.Destructor(this); }
+    AsyncReadResult_Destructor_Deleting :: inline (this: *AsyncReadResult) { this.vtable.Destructor_Deleting(this); }
+
+    AsyncReadResult_count :: inline (this: *AsyncReadResult) -> s32 { return this.vtable.count(this); }
+
+    AsyncReadResult_data :: inline (this: *AsyncReadResult, i: s32) -> *void { return this.vtable.data(this, i); }
+
+    AsyncReadResult_rowBytes :: inline (this: *AsyncReadResult, i: s32) -> u64 { return this.vtable.rowBytes(this, i); }
+
+    get_vtable :: (obj: *AsyncReadResult) -> *AsyncReadResult_VTable { return obj.vtable; }
+
+
+//     operator_assign :: (this: *SkImage.AsyncReadResult, unknown0: *SkImage.AsyncReadResult) -> *SkImage.AsyncReadResult #cpp_method #foreign libskia "_ZN7SkImage15AsyncReadResultaSERKS0_";
+    operator_assign :: (this: *SkImage.AsyncReadResult, unknown0: SkImage.AsyncReadResult) -> *SkImage.AsyncReadResult #no_context {
+        return operator_assign(this, *unknown0);
+    }
+
+    /** Client-provided context that is passed to client-provided ReadPixelsContext. */
+    ReadPixelsContext :: *void;
+
+    /**  Client-provided callback to asyncRescaleAndReadPixels() or
+    asyncRescaleAndReadPixelsYUV420() that is called when read result is ready or on failure.
+    */
+    ReadPixelsCallback :: #type (unknown0: ReadPixelsContext, unknown1: std.unique_ptr(AsyncReadResult)) -> void #c_call;
+
+    RescaleGamma :: enum u8 {
+        Src    :: 0;
+        Linear :: 1;
+        kSrc    :: Src;
+        kLinear :: Linear;
+    }
+
+    RescaleMode :: enum s32 {
+        Nearest        :: 0;
+        Linear         :: 1;
+        RepeatedLinear :: 2;
+        RepeatedCubic  :: 3;
+
+        kNearest        :: Nearest;
+        kLinear         :: Linear;
+        kRepeatedLinear :: RepeatedLinear;
+        kRepeatedCubic  :: RepeatedCubic;
+    }
+
+    /** Makes image pixel data available to caller, possibly asynchronously. It can also rescale
+    the image pixels.
+    
+    Currently asynchronous reads are only supported in the Ganesh GPU backend and only when the
+    underlying 3D API supports transfer buffers and CPU/GPU synchronization primitives. In all
+    other cases this operates synchronously.
+    
+    For the Graphite backend this API has been deprecated in favor of the equivalent API
+    on skgpu::graphite::Context.
+    
+    Data is read from the source sub-rectangle, is optionally converted to a linear gamma, is
+    rescaled to the size indicated by 'info', is then converted to the color space, color type,
+    and alpha type of 'info'. A 'srcRect' that is not contained by the bounds of the image
+    causes failure.
+    
+    When the pixel data is ready the caller's ReadPixelsCallback is called with a
+    AsyncReadResult containing pixel data in the requested color type, alpha type, and color
+    space. The AsyncReadResult will have count() == 1. Upon failure the callback is called with
+    nullptr for AsyncReadResult. For a GPU image this flushes work but a submit must occur to
+    guarantee a finite time before the callback is called.
+    
+    The data is valid for the lifetime of AsyncReadResult with the exception that if the SkImage
+    is GPU-backed the data is immediately invalidated if the context is abandoned or
+    destroyed.
+    
+    @param info            info of the requested pixels
+    @param srcRect         subrectangle of image to read
+    @param rescaleGamma    controls whether rescaling is done in the image's gamma or whether
+    the source data is transformed to a linear gamma before rescaling.
+    @param rescaleMode     controls the technique (and cost) of the rescaling
+    @param callback        function to call with result of the read
+    @param context         passed to callback
+    */
+    asyncRescaleAndReadPixels :: (this: *SkImage, info: *SkImageInfo, srcRect: *SkIRect, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) -> void #cpp_method #foreign libskia "_ZNK7SkImage25asyncRescaleAndReadPixelsERK11SkImageInfoRK7SkIRectNS_12RescaleGammaENS_11RescaleModeEPFvPvSt10unique_ptrIKNS_15AsyncReadResultESt14default_deleteISB_EEES8_";
+    asyncRescaleAndReadPixels :: (this: *SkImage, info: SkImageInfo, srcRect: SkIRect, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) #no_context {
+        asyncRescaleAndReadPixels(this, *info, *srcRect, rescaleGamma, rescaleMode, callback, _context);
+    }
+
+    /**
+    Similar to asyncRescaleAndReadPixels but performs an additional conversion to YUV. The
+    RGB->YUV conversion is controlled by 'yuvColorSpace'. The YUV data is returned as three
+    planes ordered y, u, v. The u and v planes are half the width and height of the resized
+    rectangle. The y, u, and v values are single bytes. Currently this fails if 'dstSize'
+    width and height are not even. A 'srcRect' that is not contained by the bounds of the
+    image causes failure.
+    
+    When the pixel data is ready the caller's ReadPixelsCallback is called with a
+    AsyncReadResult containing the planar data. The AsyncReadResult will have count() == 3.
+    Upon failure the callback is called with nullptr for AsyncReadResult. For a GPU image this
+    flushes work but a submit must occur to guarantee a finite time before the callback is
+    called.
+    
+    The data is valid for the lifetime of AsyncReadResult with the exception that if the SkImage
+    is GPU-backed the data is immediately invalidated if the context is abandoned or
+    destroyed.
+    
+    @param yuvColorSpace  The transformation from RGB to YUV. Applied to the resized image
+    after it is converted to dstColorSpace.
+    @param dstColorSpace  The color space to convert the resized image to, after rescaling.
+    @param srcRect        The portion of the image to rescale and convert to YUV planes.
+    @param dstSize        The size to rescale srcRect to
+    @param rescaleGamma   controls whether rescaling is done in the image's gamma or whether
+    the source data is transformed to a linear gamma before rescaling.
+    @param rescaleMode    controls the technique (and cost) of the rescaling
+    @param callback       function to call with the planar read result
+    @param context        passed to callback
+    */
+    asyncRescaleAndReadPixelsYUV420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: *SkIRect, dstSize: *SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) -> void #cpp_method #foreign libskia "_ZNK7SkImage31asyncRescaleAndReadPixelsYUV420E15SkYUVColorSpace5sk_spI12SkColorSpaceERK7SkIRectRK7SkISizeNS_12RescaleGammaENS_11RescaleModeEPFvPvSt10unique_ptrIKNS_15AsyncReadResultESt14default_deleteISF_EEESC_";
+    asyncRescaleAndReadPixelsYUV420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: SkIRect, dstSize: SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) #no_context {
+        asyncRescaleAndReadPixelsYUV420(this, yuvColorSpace, dstColorSpace, *srcRect, *dstSize, rescaleGamma, rescaleMode, callback, _context);
+    }
+
+    /**
+    * Identical to asyncRescaleAndReadPixelsYUV420 but a fourth plane is returned in the
+    * AsyncReadResult passed to 'callback'. The fourth plane contains the alpha chanel at the
+    * same full resolution as the Y plane.
+    */
+    asyncRescaleAndReadPixelsYUVA420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: *SkIRect, dstSize: *SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) -> void #cpp_method #foreign libskia "_ZNK7SkImage32asyncRescaleAndReadPixelsYUVA420E15SkYUVColorSpace5sk_spI12SkColorSpaceERK7SkIRectRK7SkISizeNS_12RescaleGammaENS_11RescaleModeEPFvPvSt10unique_ptrIKNS_15AsyncReadResultESt14default_deleteISF_EEESC_";
+    asyncRescaleAndReadPixelsYUVA420 :: (this: *SkImage, yuvColorSpace: SkYUVColorSpace, dstColorSpace: sk_sp(SkColorSpace), srcRect: SkIRect, dstSize: SkISize, rescaleGamma: SkImage.RescaleGamma, rescaleMode: SkImage.RescaleMode, callback: SkImage.ReadPixelsCallback, _context: SkImage.ReadPixelsContext) #no_context {
+        asyncRescaleAndReadPixelsYUVA420(this, yuvColorSpace, dstColorSpace, *srcRect, *dstSize, rescaleGamma, rescaleMode, callback, _context);
+    }
+
+    /** Copies SkImage to dst, scaling pixels to fit dst.width() and dst.height(), and
+    converting pixels to match dst.colorType() and dst.alphaType(). Returns true if
+    pixels are copied. Returns false if dst.addr() is nullptr, or dst.rowBytes() is
+    less than dst SkImageInfo::minRowBytes.
+    
+    Pixels are copied only if pixel conversion is possible. If SkImage SkColorType is
+    kGray_8_SkColorType, or kAlpha_8_SkColorType; dst.colorType() must match.
+    If SkImage SkColorType is kGray_8_SkColorType, dst.colorSpace() must match.
+    If SkImage SkAlphaType is kOpaque_SkAlphaType, dst.alphaType() must
+    match. If SkImage SkColorSpace is nullptr, dst.colorSpace() must match. Returns
+    false if pixel conversion is not possible.
+    
+    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
+    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
+    
+    @param dst            destination SkPixmap: SkImageInfo, pixels, row bytes
+    @return               true if pixels are scaled to fit dst
+    */
+    scalePixels :: (this: *SkImage, dst: *SkPixmap, unknown0: *SkSamplingOptions, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #cpp_method #foreign libskia "_ZNK7SkImage11scalePixelsERK8SkPixmapRK17SkSamplingOptionsNS_11CachingHintE";
+    scalePixels :: (this: *SkImage, dst: SkPixmap, unknown0: SkSamplingOptions, cachingHint: SkImage.CachingHint = .Allow_CachingHint) -> bool #no_context {
+        return scalePixels(this, *dst, *unknown0, cachingHint);
+    }
+
+    /**
+    * Create a new image by copying this image and scaling to fit the ImageInfo's dimensions
+    * and converting the pixels into the ImageInfo's ColorInfo.
+    * This is done retaining the domain (backend) of the image (e.g. gpu, raster)
+    *
+    * The Recorder parameter is required if the original image was created on a graphite Recorder,
+    * but must be nullptr if it was create in some other way (e.g. GrContext, raster, deferred).
+    *
+    * return nullptr if the requested ColorInfo is not supported, its dimesions are out of range,
+    *  or if the recorder is null on a graphite Image.
+    */
+    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: *SkImageInfo, unknown2: *SkSamplingOptions) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeScaledEP10SkRecorderRK11SkImageInfoRK17SkSamplingOptions";
+    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: SkImageInfo, unknown2: SkSamplingOptions) -> sk_sp(SkImage) #no_context {
+        return makeScaled(this, unknown0, *unknown1, *unknown2);
+    }
+    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: *SkImageInfo, unknown2: *SkSamplingOptions, unknown3: *SkSurfaceProps) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeScaledEP10SkRecorderRK11SkImageInfoRK17SkSamplingOptionsRK14SkSurfaceProps";
+    makeScaled :: (this: *SkImage, unknown0: *SkRecorder, unknown1: SkImageInfo, unknown2: SkSamplingOptions, unknown3: SkSurfaceProps) -> sk_sp(SkImage) #no_context {
+        return makeScaled(this, unknown0, *unknown1, *unknown2, *unknown3);
+    }
+
+    makeScaled :: (this: *SkImage, info: *SkImageInfo, sampling: *SkSamplingOptions) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeScaledERK11SkImageInfoRK17SkSamplingOptions";
+    makeScaled :: (this: *SkImage, info: SkImageInfo, sampling: SkSamplingOptions) -> sk_sp(SkImage) #no_context {
+        return makeScaled(this, *info, *sampling);
+    }
+
+    refEncodedData :: (this: *SkImage) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage14refEncodedDataEv";
+
+    RequiredProperties :: struct {
+        fMipmapped  := false;
+    }
+
+//     operator_eq :: (this: *SkImage.RequiredProperties, other: *SkImage.RequiredProperties) -> bool #cpp_method #foreign libskia "_ZNK7SkImage18RequiredPropertieseqERKS0_";
+    operator_eq :: (this: SkImage.RequiredProperties, other: SkImage.RequiredProperties) -> bool #no_context {
+        return operator_eq(*this, *other);
+    }
+
+//     operator_neq :: (this: *SkImage.RequiredProperties, other: *SkImage.RequiredProperties) -> bool #cpp_method #foreign libskia "_ZNK7SkImage18RequiredPropertiesneERKS0_";
+    operator_neq :: (this: SkImage.RequiredProperties, other: SkImage.RequiredProperties) -> bool #no_context {
+        return operator_neq(*this, *other);
+    }
+
+//     operator_less :: (this: *SkImage.RequiredProperties, other: *SkImage.RequiredProperties) -> bool #cpp_method #foreign libskia "_ZNK7SkImage18RequiredPropertiesltERKS0_";
+    operator_less :: (this: SkImage.RequiredProperties, other: SkImage.RequiredProperties) -> bool #no_context {
+        return operator_less(*this, *other);
+    }
+
+    /**
+    *  Returns true if the image has mipmap levels.
+    */
+    hasMipmaps :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage10hasMipmapsEv";
+
+    /**
+    *  Returns true if the image holds protected content.
+    */
+    isProtected :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage11isProtectedEv";
+
+    /**
+    *  Returns an image with the same "base" pixels as the this image, but with mipmap levels
+    *  automatically generated and attached.
+    */
+    withDefaultMipmaps :: (this: *SkImage) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage18withDefaultMipmapsEv";
+
+    /** Returns raster image or lazy image. Copies SkImage backed by GPU texture into
+    CPU memory if needed. Returns original SkImage if decoded in raster bitmap,
+    or if encoded in a stream.
+    
+    Returns nullptr if backed by GPU texture and copy fails.
+    
+    @return  raster image, lazy image, or nullptr
+    
+    example: https://fiddle.skia.org/c/@Image_makeNonTextureImage
+    */
+    makeNonTextureImage :: (this: *SkImage, unknown0: *GrDirectContext = null) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage19makeNonTextureImageEP15GrDirectContext";
+
+    /** Returns raster image. Copies SkImage backed by GPU texture into CPU memory,
+    or decodes SkImage from lazy image. Returns original SkImage if decoded in
+    raster bitmap.
+    
+    Returns nullptr if copy, decode, or pixel read fails.
+    
+    If cachingHint is kAllow_CachingHint, pixels may be retained locally.
+    If cachingHint is kDisallow_CachingHint, pixels are not added to the local cache.
+    
+    @return  raster image, or nullptr
+    
+    example: https://fiddle.skia.org/c/@Image_makeRasterImage
+    */
+    makeRasterImage :: (this: *SkImage, unknown0: *GrDirectContext, cachingHint: SkImage.CachingHint = .Disallow_CachingHint) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage15makeRasterImageEP15GrDirectContextNS_11CachingHintE";
+
+//     makeRasterImage :: (this: *SkImage, cachingHint: SkImage.CachingHint = .Disallow_CachingHint) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage15makeRasterImageENS_11CachingHintE";
+
+    /** Deprecated.
+    */
+    LegacyBitmapMode :: enum u32 {
+        kRO_LegacyBitmapMode :: 0;
+    }
+
+    /** Deprecated.
+    Creates raster SkBitmap with same pixels as SkImage. If legacyBitmapMode is
+    kRO_LegacyBitmapMode, returned bitmap is read-only and immutable.
+    Returns true if SkBitmap is stored in bitmap. Returns false and resets bitmap if
+    SkBitmap write did not succeed.
+    
+    @param bitmap            storage for legacy SkBitmap
+    @param legacyBitmapMode  bitmap is read-only and immutable
+    @return                  true if SkBitmap was created
+    */
+    asLegacyBitmap :: (this: *SkImage, bitmap: *SkBitmap, legacyBitmapMode: SkImage.LegacyBitmapMode = .kRO_LegacyBitmapMode) -> bool #cpp_method #foreign libskia "_ZNK7SkImage14asLegacyBitmapEP8SkBitmapNS_16LegacyBitmapModeE";
+
+    /** Creates a new SkImage identical to this one, but with a different SkColorSpace.
+    This does not convert the underlying pixel data, so the resulting image will draw
+    differently.
+    */
+    reinterpretColorSpace :: (this: *SkImage, newColorSpace: sk_sp(SkColorSpace)) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage21reinterpretColorSpaceE5sk_spI12SkColorSpaceE";
+
+    Constructor :: (this: *SkImage, info: *SkImageInfo, uniqueID: u32) -> void #cpp_method #foreign libskia "_ZN7SkImageC2ERK11SkImageInfoj";
+    Constructor :: (this: *SkImage, info: SkImageInfo, uniqueID: u32) #no_context {
+        Constructor(this, *info, uniqueID);
+    }
+
+    fInfo:               SkImageInfo;
+
+    withMipmaps :: (this: *SkImage, unknown0: sk_sp(SkMipmap)) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage11withMipmapsE5sk_spI8SkMipmapE";
+
+    INHERITED :: SkRefCnt;
+
+    // Virtual functions:
+    // Normally you should call them via the vtable.
+    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
+    // or need to create a vtable yourself.
+
+    /** Returns true if the contents of SkImage was created on or uploaded to GPU memory,
+    and is available as a GPU texture.
+    
+    @return  true if SkImage is a GPU texture
+    
+    example: https://fiddle.skia.org/c/@Image_isTextureBacked
+    */
+//     virtual_isTextureBacked :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage15isTextureBackedEv";
+
+    /** Returns an approximation of the amount of texture memory used by the image. Returns
+    zero if the image is not texture backed or if the texture has an external format.
+    */
+//     virtual_textureSize :: (this: *SkImage) -> u64 #cpp_method #foreign libskia "_ZNK7SkImage11textureSizeEv";
+
+    /** Returns true if SkImage can be drawn on either raster surface or GPU surface.
+    If recorder is nullptr, tests if SkImage draws on raster surface;
+    otherwise, tests if SkImage draws on the associated GPU surface.
+    
+    SkImage backed by GPU texture may become invalid if associated context is
+    invalid. lazy image may be invalid and may not draw to raster surface or
+    GPU surface or both.
+    
+    @param context  GPU context
+    @return         true if SkImage can be drawn
+    
+    example: https://fiddle.skia.org/c/@Image_isValid
+    */
+//     virtual_isValid :: (this: *SkImage, unknown0: *SkRecorder) -> bool #cpp_method #foreign libskia "_ZNK7SkImage7isValidEP10SkRecorder";
+
+    /** Returns subset of this image.
+    
+    Returns nullptr if any of the following are true:
+    - Subset is empty
+    - Subset is not contained inside the image's bounds
+    - Pixels in the image could not be read or copied
+    - This image is texture-backed and the provided context is null or does not match
+    the source image's context.
+    
+    If the source image was texture-backed, the resulting image will be texture-backed also.
+    Otherwise, the returned image will be raster-backed.
+    
+    @param recorder            the recorder of the source image (nullptr is ok if the
+    source image was texture-backed).
+    @param subset              bounds of returned SkImage
+    @param RequiredProperties  properties the returned SkImage must possess (e.g. mipmaps)
+    @return                    the subsetted image, or nullptr
+    */
+//     virtual_makeSubset :: (this: *SkImage, unknown0: *SkRecorder, subset: *SkIRect, unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage10makeSubsetEP10SkRecorderRK7SkIRectNS_18RequiredPropertiesE";
+
+    /** Returns true if SkImage is backed by an image-generator or other service that creates
+    and caches its pixels or texture on-demand.
+    
+    @return  true if SkImage is created as needed
+    
+    example: https://fiddle.skia.org/c/@Image_isLazyGenerated_a
+    example: https://fiddle.skia.org/c/@Image_isLazyGenerated_b
+    */
+//     virtual_isLazyGenerated :: (this: *SkImage) -> bool #cpp_method #foreign libskia "_ZNK7SkImage15isLazyGeneratedEv";
+
+    /** Creates SkImage in target SkColorSpace.
+    Returns nullptr if SkImage could not be created.
+    
+    Returns original SkImage if it is in target SkColorSpace.
+    Otherwise, converts pixels from SkImage SkColorSpace to target SkColorSpace.
+    If SkImage colorSpace() returns nullptr, SkImage SkColorSpace is assumed to be sRGB.
+    
+    If this image is graphite-backed, the recorder parameter is required.
+    
+    @param targetColorSpace    SkColorSpace describing color range of returned SkImage
+    @param recorder            The Recorder in which to create the new image
+    @param RequiredProperties  properties the returned SkImage must possess (e.g. mipmaps)
+    @return                    created SkImage in target SkColorSpace
+    */
+//     virtual_makeColorSpace :: (this: *SkImage, unknown0: *SkRecorder, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage14makeColorSpaceEP10SkRecorder5sk_spI12SkColorSpaceENS_18RequiredPropertiesE";
+
+    /** Experimental.
+    Creates SkImage in target SkColorType and SkColorSpace.
+    Returns nullptr if SkImage could not be created.
+    
+    Returns original SkImage if it is in target SkColorType and SkColorSpace.
+    
+    If this image is graphite-backed, the recorder parameter is required.
+    
+    @param targetColorType     SkColorType of returned SkImage
+    @param targetColorSpace    SkColorSpace of returned SkImage
+    @param recorder            The Recorder in which to create the new image
+    @param RequiredProperties  properties the returned SkImage must possess (e.g. mipmaps)
+    @return                    created SkImage in target SkColorType and SkColorSpace
+    */
+//     virtual_makeColorTypeAndColorSpace :: (this: *SkImage, unknown0: *SkRecorder, targetColorType: SkColorType, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK7SkImage26makeColorTypeAndColorSpaceEP10SkRecorder11SkColorType5sk_spI12SkColorSpaceENS_18RequiredPropertiesE";
+}
+SkImage_VTable :: struct #type_info_none {
+    using vtable:               SkRefCntBase_VTable;
+
+    isTextureBacked:            #type (this: *SkImage) -> bool #cpp_method;
+
+    textureSize:                #type (this: *SkImage) -> u64 #cpp_method;
+
+    isValid:                    #type (this: *SkImage, unknown0: *SkRecorder) -> bool #cpp_method;
+
+    makeSubset:                 #type (this: *SkImage, unknown0: *SkRecorder, subset: *SkIRect, unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod;
+
+    isLazyGenerated:            #type (this: *SkImage) -> bool #cpp_method;
+
+    makeColorSpace:             #type (this: *SkImage, unknown0: *SkRecorder, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod;
+
+    makeColorTypeAndColorSpace: #type (this: *SkImage, unknown0: *SkRecorder, targetColorType: SkColorType, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) #cpp_method #cpp_return_type_is_non_pod;
+}
+SkImage_isTextureBacked :: inline (this: *SkImage) -> bool { return this.vtable.isTextureBacked(this); }
+
+SkImage_textureSize :: inline (this: *SkImage) -> u64 { return this.vtable.textureSize(this); }
+
+SkImage_isValid :: inline (this: *SkImage, unknown0: *SkRecorder) -> bool { return this.vtable.isValid(this, unknown0); }
+
+SkImage_makeSubset :: inline (this: *SkImage, unknown0: *SkRecorder, subset: *SkIRect, unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) { return this.vtable.makeSubset(this, unknown0, subset, unknown1); }
+
+SkImage_isLazyGenerated :: inline (this: *SkImage) -> bool { return this.vtable.isLazyGenerated(this); }
+
+SkImage_makeColorSpace :: inline (this: *SkImage, unknown0: *SkRecorder, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) { return this.vtable.makeColorSpace(this, unknown0, targetColorSpace, unknown1); }
+
+SkImage_makeColorTypeAndColorSpace :: inline (this: *SkImage, unknown0: *SkRecorder, targetColorType: SkColorType, targetColorSpace: sk_sp(SkColorSpace), unknown1: SkImage.RequiredProperties) -> sk_sp(SkImage) { return this.vtable.makeColorTypeAndColorSpace(this, unknown0, targetColorType, targetColorSpace, unknown1); }
+
+get_vtable :: (obj: *SkImage) -> *SkImage_VTable { return obj.vtable; }
+
+
 SkMask :: struct {}
 
 /** \class SkPixmap
@@ -14863,907 +16517,6 @@ SkSurface_replaceBackendTexture :: inline (this: *SkSurface, backendTexture: *Gr
 get_vtable :: (obj: *SkSurface) -> *SkSurface_VTable { return obj.vtable; }
 
 
-SkFourByteTag :: u32;
-
-// SkSetFourByteTag :: (a: u8, b: u8, c: u8, d: u8) -> SkFourByteTag #foreign libskia "_ZL16SkSetFourByteTagcccc";
-
-/** Represents a set of actual arguments for a font. */
-SkFontArguments :: struct {
-    VariationPosition :: struct {
-        Coordinate :: struct {
-            axis:  SkFourByteTag;
-            value: float;
-        }
-
-        coordinates:     *Coordinate;
-        coordinateCount: s32;
-    }
-
-    /** Specify a palette to use and overrides for palette entries.
-    *
-    *  `overrides` is a list of pairs of palette entry index and color.
-    *  The overriden palette entries will use the associated color.
-    *  Override pairs with palette entry indices out of range will not be applied.
-    *  Later override entries override earlier ones.
-    */
-    Palette :: struct {
-        Override :: struct {
-            index: u16;
-            color: SkColor;
-        }
-
-        index:         s32;
-        overrides:     *Override;
-        overrideCount: s32;
-    }
-
-//     Constructor :: (this: *SkFontArguments) -> void #cpp_method #foreign libskia "_ZN15SkFontArgumentsC1Ev";
-
-    /** Specify the index of the desired font.
-    *
-    *  Font formats like ttc, dfont, cff, cid, pfr, t42, t1, and fon may actually be indexed
-    *  collections of fonts.
-    */
-//     setCollectionIndex :: (this: *SkFontArguments, collectionIndex: s32) -> *SkFontArguments #cpp_method #foreign libskia "_ZN15SkFontArguments18setCollectionIndexEi";
-
-    /** Specify a position in the variation design space.
-    *
-    *  Any axis not specified will use the default value.
-    *  Any specified axis not actually present in the font will be ignored.
-    *
-    *  @param position not copied. The value must remain valid for life of SkFontArguments.
-    */
-//     setVariationDesignPosition :: (this: *SkFontArguments, position: VariationPosition) -> *SkFontArguments #cpp_method #foreign libskia "_ZN15SkFontArguments26setVariationDesignPositionENS_17VariationPositionE";
-
-//     getCollectionIndex :: (this: *SkFontArguments) -> s32 #cpp_method #foreign libskia "_ZNK15SkFontArguments18getCollectionIndexEv";
-
-//     getVariationDesignPosition :: (this: *SkFontArguments) -> VariationPosition #cpp_method #foreign libskia "_ZNK15SkFontArguments26getVariationDesignPositionEv";
-
-//     setPalette :: (this: *SkFontArguments, palette: Palette) -> *SkFontArguments #cpp_method #foreign libskia "_ZN15SkFontArguments10setPaletteENS_7PaletteE";
-
-//     getPalette :: (this: *SkFontArguments) -> Palette #cpp_method #foreign libskia "_ZNK15SkFontArguments10getPaletteEv";
-
-    fCollectionIndex:         s32;
-    fVariationDesignPosition: VariationPosition;
-    fPalette:                 Palette;
-}
-
-SkFontParameters :: struct {
-    using skfontparameters__raw: SkFontParameters__RAW;
-    __empty_struct_padding:      u8; // C++ makes empty structs have length 1
-}
-// SkFontParameters without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from SkFontParameters
-SkFontParameters__RAW :: struct {
-    Variation :: struct {
-        using variation__raw:   Variation__RAW;
-        __empty_struct_padding: u8; // C++ makes empty structs have length 1
-    }
-        // Variation without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from Variation
-    Variation__RAW :: struct {
-        // Parameters in a variation font axis.
-        Axis :: struct {
-//             Constructor :: (this: *Axis) -> void #cpp_method #foreign libskia "_ZN16SkFontParameters9Variation4AxisC1Ev";
-//             Constructor :: (this: *Axis, tag: SkFourByteTag, min: float, def: float, max: float, hidden: bool) -> void #cpp_method #foreign libskia "_ZN16SkFontParameters9Variation4AxisC1Ejfffb";
-
-            // Four character identifier of the font axis (weight, width, slant, italic...).
-            tag:    SkFourByteTag;
-
-            // Minimum value supported by this axis.
-            min:    float;
-
-            // Default value set by this axis.
-            def:    float;
-
-            // Maximum value supported by this axis. The maximum can equal the minimum.
-            max:    float;
-
-            // Return whether this axis is recommended to be remain hidden in user interfaces.
-//             isHidden :: (this: *Axis) -> bool #cpp_method #foreign libskia "_ZNK16SkFontParameters9Variation4Axis8isHiddenEv";
-
-            // Set this axis to be remain hidden in user interfaces.
-//             setHidden :: (this: *Axis, hidden: bool) -> void #cpp_method #foreign libskia "_ZN16SkFontParameters9Variation4Axis9setHiddenEb";
-
-            HIDDEN: u16 : 1;
-
-            // Attributes for a font axis.
-            flags:  u16;
-        }
-    }
-}
-
-SkFontStyle :: struct {
-    Weight :: enum u32 {
-        Invisible_Weight  :: 0;
-        Thin_Weight       :: 100;
-        ExtraLight_Weight :: 200;
-        Light_Weight      :: 300;
-        Normal_Weight     :: 400;
-        Medium_Weight     :: 500;
-        SemiBold_Weight   :: 600;
-        Bold_Weight       :: 700;
-        ExtraBold_Weight  :: 800;
-        Black_Weight      :: 900;
-        ExtraBlack_Weight :: 1000;
-
-        kInvisible_Weight  :: Invisible_Weight;
-        kThin_Weight       :: Thin_Weight;
-        kExtraLight_Weight :: ExtraLight_Weight;
-        kLight_Weight      :: Light_Weight;
-        kNormal_Weight     :: Normal_Weight;
-        kMedium_Weight     :: Medium_Weight;
-        kSemiBold_Weight   :: SemiBold_Weight;
-        kBold_Weight       :: Bold_Weight;
-        kExtraBold_Weight  :: ExtraBold_Weight;
-        kBlack_Weight      :: Black_Weight;
-        kExtraBlack_Weight :: ExtraBlack_Weight;
-    }
-
-    Width :: enum u32 {
-        UltraCondensed_Width :: 1;
-        ExtraCondensed_Width :: 2;
-        Condensed_Width      :: 3;
-        SemiCondensed_Width  :: 4;
-        Normal_Width         :: 5;
-        SemiExpanded_Width   :: 6;
-        Expanded_Width       :: 7;
-        ExtraExpanded_Width  :: 8;
-        UltraExpanded_Width  :: 9;
-
-        kUltraCondensed_Width :: UltraCondensed_Width;
-        kExtraCondensed_Width :: ExtraCondensed_Width;
-        kCondensed_Width      :: Condensed_Width;
-        kSemiCondensed_Width  :: SemiCondensed_Width;
-        kNormal_Width         :: Normal_Width;
-        kSemiExpanded_Width   :: SemiExpanded_Width;
-        kExpanded_Width       :: Expanded_Width;
-        kExtraExpanded_Width  :: ExtraExpanded_Width;
-        kUltraExpanded_Width  :: UltraExpanded_Width;
-    }
-
-    Slant :: enum u8 {
-        Upright_Slant :: 0;
-        Italic_Slant  :: 1;
-        Oblique_Slant :: 2;
-
-        kUpright_Slant :: Upright_Slant;
-        kItalic_Slant  :: Italic_Slant;
-        kOblique_Slant :: Oblique_Slant;
-    }
-
-//     Constructor :: (this: *SkFontStyle, weight: s32, width: s32, slant: Slant) -> void #cpp_method #foreign libskia "_ZN11SkFontStyleC1EiiNS_5SlantE";
-
-//     Constructor :: (this: *SkFontStyle) -> void #cpp_method #foreign libskia "_ZN11SkFontStyleC1Ev";
-
-//     weight :: (this: *SkFontStyle) -> s32 #cpp_method #foreign libskia "_ZNK11SkFontStyle6weightEv";
-//     width :: (this: *SkFontStyle) -> s32 #cpp_method #foreign libskia "_ZNK11SkFontStyle5widthEv";
-//     slant :: (this: *SkFontStyle) -> Slant #cpp_method #foreign libskia "_ZNK11SkFontStyle5slantEv";
-
-//     Normal :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle6NormalEv";
-
-//     Bold :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle4BoldEv";
-
-//     Italic :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle6ItalicEv";
-
-//     BoldItalic :: () -> SkFontStyle #foreign libskia "_ZN11SkFontStyle10BoldItalicEv";
-
-    fValue: s32;
-}
-
-// operator_eq :: (this: *SkFontStyle, rhs: *SkFontStyle) -> bool #cpp_method #foreign libskia "_ZNK11SkFontStyleeqERKS_";
-operator_eq :: (this: SkFontStyle, rhs: SkFontStyle) -> bool #no_context {
-    return operator_eq(*this, *rhs);
-}
-
-/** \class SkWeakRefCnt
-
-SkWeakRefCnt is the base class for objects that may be shared by multiple
-objects. When an existing strong owner wants to share a reference, it calls
-ref(). When a strong owner wants to release its reference, it calls
-unref(). When the shared object's strong reference count goes to zero as
-the result of an unref() call, its (virtual) weak_dispose method is called.
-It is an error for the destructor to be called explicitly (or via the
-object going out of scope on the stack or calling delete) if
-getRefCnt() > 1.
-
-In addition to strong ownership, an owner may instead obtain a weak
-reference by calling weak_ref(). A call to weak_ref() must be balanced by a
-call to weak_unref(). To obtain a strong reference from a weak reference,
-call try_ref(). If try_ref() returns true, the owner's pointer is now also
-a strong reference on which unref() must be called. Note that this does not
-affect the original weak reference, weak_unref() must still be called. When
-the weak reference count goes to zero, the object is deleted. While the
-weak reference count is positive and the strong reference count is zero the
-object still exists, but will be in the disposed state. It is up to the
-object to define what this means.
-
-Note that a strong reference implicitly implies a weak reference. As a
-result, it is allowable for the owner of a strong ref to call try_ref().
-This will have the same effect as calling ref(), but may be more expensive.
-
-Example:
-
-SkWeakRefCnt myRef = strongRef.weak_ref();
-... // strongRef.unref() may or may not be called
-if (myRef.try_ref()) {
-... // use myRef
-myRef.unref();
-} else {
-// myRef is in the disposed state
-}
-myRef.weak_unref();
-*/
-SkWeakRefCnt :: struct {
-    vtable:                  *SkWeakRefCnt_VTable;
-    using skweakrefcnt__raw: SkWeakRefCnt__RAW;
-    #place vtable; #as skrefcnt: SkRefCnt; // Support cast to SkRefCnt
-}
-// SkWeakRefCnt without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkWeakRefCnt
-SkWeakRefCnt__RAW :: struct {
-    using skrefcnt__raw: SkRefCnt__RAW;
-
-    /** Default construct, initializing the reference counts to 1.
-    The strong references collectively hold one weak reference. When the
-    strong reference count goes to zero, the collectively held weak
-    reference is released.
-    */
-//     Constructor :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntC1Ev";
-
-    /** Destruct, asserting that the weak reference count is 1.
-    */
-//     Destructor_Base :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntD2Ev";
-
-    /** Return the weak reference count. */
-//     getWeakCnt :: (this: *SkWeakRefCnt) -> s32 #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt10getWeakCntEv";
-
-    /** If fRefCnt is 0, returns 0.
-    *  Otherwise increments fRefCnt, acquires, and returns the old value.
-    */
-//     atomic_conditional_acquire_strong_ref :: (this: *SkWeakRefCnt) -> s32 #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt37atomic_conditional_acquire_strong_refEv";
-
-    /** Creates a strong reference from a weak reference, if possible. The
-    caller must already be an owner. If try_ref() returns true the owner
-    is in posession of an additional strong reference. Both the original
-    reference and new reference must be properly unreferenced. If try_ref()
-    returns false, no strong reference could be created and the owner's
-    reference is in the same state as before the call.
-    */
-//     try_ref :: (this: *SkWeakRefCnt) -> bool #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt7try_refEv";
-
-    /** Increment the weak reference count. Must be balanced by a call to
-    weak_unref().
-    */
-//     weak_ref :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt8weak_refEv";
-
-    /** Decrement the weak reference count. If the weak reference count is 1
-    before the decrement, then call delete on the object. Note that if this
-    is the case, then the object needs to have been allocated via new, and
-    not on the stack.
-    */
-//     weak_unref :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt10weak_unrefEv";
-
-    /** Returns true if there are no strong references to the object. When this
-    is the case all future calls to try_ref() will return false.
-    */
-//     weak_expired :: (this: *SkWeakRefCnt) -> bool #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt12weak_expiredEv";
-
-    /* Invariant: fWeakCnt = #weak + (fRefCnt > 0 ? 1 : 0) */
-    fWeakCnt:            std.atomic(s32);
-
-    INHERITED :: SkRefCnt;
-
-    // Virtual functions:
-    // Normally you should call them via the vtable.
-    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
-    // or need to create a vtable yourself.
-
-    /** Destruct, asserting that the weak reference count is 1.
-    */
-//     virtual_Destructor :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntD1Ev";
-    /** Destruct, asserting that the weak reference count is 1.
-    */
-//     virtual_Destructor_Deleting :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZN12SkWeakRefCntD0Ev";
-
-    /** Called when the strong reference count goes to zero. This allows the
-    object to free any resources it may be holding. Weak references may
-    still exist and their level of allowed access to the object is defined
-    by the object's class.
-    */
-//     virtual_weak_dispose :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt12weak_disposeEv";
-
-    /** Called when the strong reference count goes to zero. Calls weak_dispose
-    on the object and releases the implicit weak reference held
-    collectively by the strong references.
-    */
-//     virtual_internal_dispose :: (this: *SkWeakRefCnt) -> void #cpp_method #foreign libskia "_ZNK12SkWeakRefCnt16internal_disposeEv";
-}
-SkWeakRefCnt_VTable :: struct #type_info_none {
-    using vtable: SkRefCntBase_VTable;
-
-    weak_dispose: #type (this: *SkWeakRefCnt) -> void #cpp_method;
-}
-SkWeakRefCnt_weak_dispose :: inline (this: *SkWeakRefCnt) { this.vtable.weak_dispose(this); }
-
-get_vtable :: (obj: *SkWeakRefCnt) -> *SkWeakRefCnt_VTable { return obj.vtable; }
-
-
-// SkOnce provides call-once guarantees for Skia, much like std::once_flag/std::call_once().
-//
-// There should be no particularly error-prone gotcha use cases when using SkOnce.
-// It works correctly as a class member, a local, a global, a function-scoped static, whatever.
-SkOnce :: struct {
-//     Constructor :: (this: *SkOnce) -> void #cpp_method #foreign libskia "_ZN6SkOnceC1Ev";
-
-    State :: enum u8 {
-        NotStarted :: 0;
-        Claimed    :: 1;
-        Done       :: 2;
-    }
-    fState: std.atomic(u8) = .{cast(u8)State.NotStarted};
-}
-
-SkDescriptor :: struct {}
-SkFontMgr :: struct {}
-SkFontDescriptor :: struct {}
-SkScalerContext :: struct {}
-
-SkAdvancedTypefaceMetrics :: struct {}
-SkScalerContextEffects :: struct {}
-SkScalerContextRec :: struct {}
-
-SkTypefaceID :: u32;
-
-/** Machine endian. */
-SkFontTableTag :: u32;
-
-/** \class SkTypeface
-
-The SkTypeface class specifies the typeface and intrinsic style of a font.
-This is used in the paint, along with optionally algorithmic settings like
-textSize, textSkewX, textScaleX, kFakeBoldText_Mask, to specify
-how text appears when drawn (and measured).
-
-Typeface objects are immutable, and so they can be shared between threads.
-*/
-SkTypeface :: struct {
-    vtable:                *SkTypeface_VTable;
-    using sktypeface__raw: SkTypeface__RAW;
-    #place vtable; #as skweakrefcnt: SkWeakRefCnt; // Support cast to SkWeakRefCnt
-}
-// SkTypeface without vtable pointer. Needed to generate a C++-equivalent struct layout when "inheriting" from SkTypeface
-SkTypeface__RAW :: struct {
-    using,except(INHERITED) skweakrefcnt__raw: SkWeakRefCnt__RAW;
-
-    /** Returns the typeface's intrinsic style attributes. */
-    fontStyle :: (this: *SkTypeface) -> SkFontStyle #cpp_method #foreign libskia "_ZNK10SkTypeface9fontStyleEv";
-
-    /** Returns true if style() has the kBold bit set. */
-    isBold :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface6isBoldEv";
-
-    /** Returns true if style() has the kItalic bit set. */
-    isItalic :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface8isItalicEv";
-
-    /** Returns true if the typeface claims to be fixed-pitch.
-    *  This is a style bit, advance widths may vary even if this returns true.
-    */
-    isFixedPitch :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface12isFixedPitchEv";
-
-    /** Copy into 'coordinates' (allocated by the caller) the design variation coordinates.
-    *
-    *  @param coordinates the span into which to write the design variation coordinates.
-    *
-    *  @return The number of axes, or -1 if there is an error.
-    *  If 'coordinates.size() >= numAxes' then 'coordinates' will be
-    *  filled with the variation coordinates describing the position of this typeface in design
-    *  variation space. It is possible the number of axes can be retrieved but actual position
-    *  cannot.
-    */
-    getVariationDesignPosition :: (this: *SkTypeface, coordinates: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface26getVariationDesignPositionE6SkSpanIN15SkFontArguments17VariationPosition10CoordinateEE";
-
-    /** Copy into 'parameters' (allocated by the caller) the design variation parameters.
-    *
-    *  @param parameters the span into which to write the design variation parameters.
-    *
-    *  @return The number of axes, or -1 if there is an error.
-    *  If 'parameters.size() >= numAxes' then 'parameters' will be
-    *  filled with the variation parameters describing the position of this typeface in design
-    *  variation space. It is possible the number of axes can be retrieved but actual parameters
-    *  cannot.
-    */
-    getVariationDesignParameters :: (this: *SkTypeface, parameters: SkSpan(SkFontParameters.Variation.Axis)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface28getVariationDesignParametersE6SkSpanIN16SkFontParameters9Variation4AxisEE";
-
-    /** Return a 32bit value for this typeface, unique for the underlying font
-    data. Will never return 0.
-    */
-//     uniqueID :: (this: *SkTypeface) -> SkTypefaceID #cpp_method #foreign libskia "_ZNK10SkTypeface8uniqueIDEv";
-
-    /** Returns true if the two typefaces reference the same underlying font,
-    handling either being null (treating null as not equal to any font).
-    */
-    Equal :: (facea: *SkTypeface, faceb: *SkTypeface) -> bool #foreign libskia "_ZN10SkTypeface5EqualEPKS_S1_";
-
-    /** Returns a non-null typeface which contains no glyphs. */
-    MakeEmpty :: () -> sk_sp(SkTypeface) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTypeface9MakeEmptyEv";
-
-    /** Return a new typeface based on this typeface but parameterized as specified in the
-    SkFontArguments. If the SkFontArguments does not supply an argument for a parameter
-    in the font then the value from this typeface will be used as the value for that
-    argument. If the cloned typeface would be exaclty the same as this typeface then
-    this typeface may be ref'ed and returned. May return nullptr on failure.
-    */
-    makeClone :: (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface9makeCloneERK15SkFontArguments";
-    makeClone :: (this: *SkTypeface, unknown0: SkFontArguments) -> sk_sp(SkTypeface) #no_context {
-        return makeClone(this, *unknown0);
-    }
-
-    /**
-    *  A typeface can serialize just a descriptor (names, etc.), or it can also include the
-    *  actual font data (which can be large). This enum controls how serialize() decides what
-    *  to serialize.
-    */
-    SerializeBehavior :: enum s32 {
-        DoIncludeData      :: 0;
-        DontIncludeData    :: 1;
-        IncludeDataIfLocal :: 2;
-
-        kDoIncludeData      :: DoIncludeData;
-        kDontIncludeData    :: DontIncludeData;
-        kIncludeDataIfLocal :: IncludeDataIfLocal;
-    }
-
-    /** Write a unique signature to a stream, sufficient to reconstruct a
-    typeface referencing the same font when Deserialize is called.
-    */
-    serialize :: (this: *SkTypeface, unknown0: *SkWStream, unknown1: SkTypeface.SerializeBehavior = .IncludeDataIfLocal) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface9serializeEP9SkWStreamNS_17SerializeBehaviorE";
-
-    /**
-    *  Same as serialize(SkWStream*, ...) but returns the serialized data in SkData, instead of
-    *  writing it to a stream.
-    */
-    serialize :: (this: *SkTypeface, unknown0: SkTypeface.SerializeBehavior = .IncludeDataIfLocal) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface9serializeENS_17SerializeBehaviorE";
-
-    /** Given the data previously written by serialize(), return a new instance
-    of a typeface referring to the same font. If that font is not available,
-    return nullptr.
-    Goes through all registered typeface factories and lastResortMgr (if non-null).
-    Does not affect ownership of SkStream.
-    */
-    MakeDeserialize :: (unknown0: *SkStream, lastResortMgr: sk_sp(SkFontMgr)) -> sk_sp(SkTypeface) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTypeface15MakeDeserializeEP8SkStream5sk_spI9SkFontMgrE";
-
-    /**
-    *  Given an array of UTF32 character codes, return their corresponding glyph IDs.
-    *
-    *  @param unis span of UTF32 chars
-    *  @param glyphs returns the corresponding glyph IDs for each character.
-    */
-    unicharsToGlyphs :: (this: *SkTypeface, unis: SkSpan(SkUnichar), glyphs: SkSpan(SkGlyphID)) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface16unicharsToGlyphsE6SkSpanIKiES0_ItE";
-
-    textToGlyphs :: (this: *SkTypeface, text: *void, byteLength: u64, encoding: SkTextEncoding, glyphs: SkSpan(SkGlyphID)) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface12textToGlyphsEPKvm14SkTextEncoding6SkSpanItE";
-
-    /**
-    *  Return the glyphID that corresponds to the specified unicode code-point
-    *  (in UTF32 encoding). If the unichar is not supported, returns 0.
-    *
-    *  This is a short-cut for calling unicharsToGlyphs().
-    */
-    unicharToGlyph :: (this: *SkTypeface, unichar: SkUnichar) -> SkGlyphID #cpp_method #foreign libskia "_ZNK10SkTypeface14unicharToGlyphEi";
-
-    /**
-    *  Return the number of glyphs in the typeface.
-    */
-    countGlyphs :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface11countGlyphsEv";
-
-    /** Return the number of tables in the font. */
-    countTables :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface11countTablesEv";
-
-    /** Copy into tags[] (allocated by the caller) the list of table tags in
-    *  the font, and return the number. This will be the same as CountTables()
-    *  or 0 if an error occured. If tags is empty, this only returns the count
-    *  (the same as calling countTables()).
-    */
-    readTableTags :: (this: *SkTypeface, tags: SkSpan(SkFontTableTag)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface13readTableTagsE6SkSpanIjE";
-
-    /** Given a table tag, return the size of its contents, or 0 if not present
-    */
-    getTableSize :: (this: *SkTypeface, unknown0: SkFontTableTag) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface12getTableSizeEj";
-
-    /** Copy the contents of a table into data (allocated by the caller). Note
-    *  that the contents of the table will be in their native endian order
-    *  (which for most truetype tables is big endian). If the table tag is
-    *  not found, or there is an error copying the data, then 0 is returned.
-    *  If this happens, it is possible that some or all of the memory pointed
-    *  to by data may have been written to, even though an error has occured.
-    *
-    *  @param tag  The table tag whose contents are to be copied
-    *  @param offset The offset in bytes into the table's contents where the
-    *  copy should start from.
-    *  @param length The number of bytes, starting at offset, of table data
-    *  to copy.
-    *  @param data storage address where the table contents are copied to
-    *  @return the number of bytes actually copied into data. If offset+length
-    *  exceeds the table's size, then only the bytes up to the table's
-    *  size are actually copied, and this is the value returned. If
-    *  offset > the table's size, or tag is not a valid table,
-    *  then 0 is returned.
-    */
-    getTableData :: (this: *SkTypeface, tag: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface12getTableDataEjmmPv";
-
-    /**
-    *  Return an immutable copy of the requested font table, or nullptr if that table was
-    *  not found. This can sometimes be faster than calling getTableData() twice: once to find
-    *  the length, and then again to copy the data.
-    *
-    *  @param tag  The table tag whose contents are to be copied
-    *  @return an immutable copy of the table's data, or nullptr.
-    */
-    copyTableData :: (this: *SkTypeface, tag: SkFontTableTag) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface13copyTableDataEj";
-
-    /**
-    *  Return the units-per-em value for this typeface, or zero if there is an
-    *  error.
-    */
-    getUnitsPerEm :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface13getUnitsPerEmEv";
-
-    /**
-    *  Given a run of glyphs, return the associated horizontal adjustments.
-    *  Adjustments are in "design units", which are integers relative to the
-    *  typeface's units per em (see getUnitsPerEm).
-    *
-    *  Some typefaces are known to never support kerning. Calling this method
-    *  with empty spans (e.g. getKerningPairAdustments({}, {})) returns
-    *  a boolean indicating if the typeface might support kerning. If it
-    *  returns false, then it will always return false (no kerning) for all
-    *  possible glyph runs. If it returns true, then it *may* return true for
-    *  some glyph runs.
-    *
-    *  If the method returns true, and there are 1 or more glyphs in the span, then
-    *  this will return in adjustments N values,
-    *  where N = min(glyphs.size() - 1, adjustments.size()).
-    
-    *  If the method returns false, then no kerning should be applied, and the adjustments
-    *  array will be in an undefined state (possibly some values may have been
-    *  written, but none of them should be interpreted as valid values).
-    */
-    getKerningPairAdjustments :: (this: *SkTypeface, glyphs: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface25getKerningPairAdjustmentsE6SkSpanIKtES0_IiE";
-
-    LocalizedString :: struct {
-        fString:   SkString;
-        fLanguage: SkString;
-    }
-
-    LocalizedStrings :: struct {
-        vtable: *LocalizedStrings_VTable;
-
-//         Constructor :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsC2Ev";
-//         Destructor_Base :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsD2Ev";
-
-//         unref :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStrings5unrefEv";
-
-//         CopyConstructor :: (this: *LocalizedStrings, unknown0: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsC2ERKS0_";
-        CopyConstructor :: (this: *LocalizedStrings, unknown0: LocalizedStrings) #no_context {
-            CopyConstructor(this, *unknown0);
-        }
-
-        // Virtual functions:
-        // Normally you should call them via the vtable.
-        // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
-        // or need to create a vtable yourself.
-
-//         virtual_Destructor :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsD1Ev";
-//         virtual_Destructor_Deleting :: (this: *LocalizedStrings) -> void #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsD0Ev";
-//         virtual_next :: (this: *LocalizedStrings, localizedString: *LocalizedString) -> bool #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStrings4nextEPNS_15LocalizedStringE";
-    }
-    LocalizedStrings_VTable :: struct #type_info_none {
-        Destructor:          #type (this: *SkTypeface.LocalizedStrings) -> void #cpp_method;
-        Destructor_Deleting: #type (this: *SkTypeface.LocalizedStrings) -> void #cpp_method;
-        next:                #type (this: *SkTypeface.LocalizedStrings, localizedString: *SkTypeface.LocalizedString) -> bool #cpp_method;
-    }
-    LocalizedStrings_Destructor :: inline (this: *LocalizedStrings) { this.vtable.Destructor(this); }
-    LocalizedStrings_Destructor_Deleting :: inline (this: *LocalizedStrings) { this.vtable.Destructor_Deleting(this); }
-    LocalizedStrings_next :: inline (this: *LocalizedStrings, localizedString: *LocalizedString) -> bool { return this.vtable.next(this, localizedString); }
-
-    get_vtable :: (obj: *LocalizedStrings) -> *LocalizedStrings_VTable { return obj.vtable; }
-
-
-//     operator_assign :: (this: *SkTypeface.LocalizedStrings, unknown0: *SkTypeface.LocalizedStrings) -> *SkTypeface.LocalizedStrings #cpp_method #foreign libskia "_ZN10SkTypeface16LocalizedStringsaSERKS0_";
-    operator_assign :: (this: *SkTypeface.LocalizedStrings, unknown0: SkTypeface.LocalizedStrings) -> *SkTypeface.LocalizedStrings #no_context {
-        return operator_assign(this, *unknown0);
-    }
-
-    /**
-    *  Returns an iterator which will attempt to enumerate all of the
-    *  family names specified by the font.
-    *  It is the caller's responsibility to unref() the returned pointer.
-    */
-    createFamilyNameIterator :: (this: *SkTypeface) -> *SkTypeface.LocalizedStrings #cpp_method #foreign libskia "_ZNK10SkTypeface24createFamilyNameIteratorEv";
-
-    /**
-    *  Return the family name for this typeface. It will always be returned
-    *  encoded as UTF8, but the language of the name is whatever the host
-    *  platform chooses.
-    */
-    getFamilyName :: (this: *SkTypeface, name: *SkString) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface13getFamilyNameEP8SkString";
-
-    /**
-    *  Return the PostScript name for this typeface.
-    *  Value may change based on variation parameters.
-    *  Returns false if no PostScript name is available.
-    */
-    getPostScriptName :: (this: *SkTypeface, name: *SkString) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface17getPostScriptNameEP8SkString";
-
-    /**
-    *  If the primary resource backing this typeface has a name (like a file
-    *  path or URL) representable by unicode code points, the `resourceName`
-    *  will be set. The primary purpose is as a user facing indication about
-    *  where the data was obtained (which font file was used).
-    *
-    *  Returns the number of resources backing this typeface.
-    *
-    *  For local font collections resource name will often be a file path. The
-    *  file path may or may not exist. If it does exist, using it to create an
-    *  SkTypeface may or may not create a similar SkTypeface to this one.
-    */
-    getResourceName :: (this: *SkTypeface, resourceName: *SkString) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface15getResourceNameEP8SkString";
-
-    /**
-    *  Return a stream for the contents of the font data, or NULL on failure.
-    *  If ttcIndex is not null, it is set to the TrueTypeCollection index
-    *  of this typeface within the stream, or 0 if the stream is not a
-    *  collection.
-    *  The caller is responsible for deleting the stream.
-    */
-    openStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface10openStreamEPi";
-
-    /**
-    * Return a stream for the contents of the font data.
-    * Returns nullptr on failure or if the font data isn't already available in stream form.
-    * Use when the stream can be used opportunistically but the calling code would prefer
-    * to fall back to table access if creating the stream would be expensive.
-    * Otherwise acts the same as openStream.
-    */
-    openExistingStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface18openExistingStreamEPi";
-
-    /**
-    *  Return a scalercontext for the given descriptor. It may return a
-    *  stub scalercontext that will not crash, but will draw nothing.
-    */
-    createScalerContext :: (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface19createScalerContextERK22SkScalerContextEffectsPK12SkDescriptor";
-    createScalerContext :: (this: *SkTypeface, unknown0: SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #no_context {
-        return createScalerContext(this, *unknown0, unknown1);
-    }
-
-    /**
-    *  Return a rectangle (scaled to 1-pt) that represents the union of the bounds of all
-    *  of the glyphs, but each one positioned at (0,). This may be conservatively large, and
-    *  will not take into account any hinting or other size-specific adjustments.
-    */
-    getBounds :: (this: *SkTypeface) -> SkRect #cpp_method #foreign libskia "_ZNK10SkTypeface9getBoundsEv";
-
-    // PRIVATE / EXPERIMENTAL -- do not call
-//     filterRec :: (this: *SkTypeface, rec: *SkScalerContextRec) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface9filterRecEP18SkScalerContextRec";
-
-    // PRIVATE / EXPERIMENTAL -- do not call
-//     getFontDescriptor :: (this: *SkTypeface, desc: *SkFontDescriptor, isLocal: *bool) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface17getFontDescriptorEP16SkFontDescriptorPb";
-
-    // PRIVATE / EXPERIMENTAL -- do not call
-//     internal_private_getCTFontRef :: (this: *SkTypeface) -> *void #cpp_method #foreign libskia "_ZNK10SkTypeface29internal_private_getCTFontRefEv";
-
-    /* Skia reserves all tags that begin with a lower case letter and 0 */
-    FactoryId :: SkFourByteTag;
-    Register :: (id: SkTypeface.FactoryId, make: #type (unknown0: std.unique_ptr(SkStreamAsset), unknown1: *SkFontArguments) -> sk_sp(SkTypeface) #c_call #cpp_return_type_is_non_pod) -> void #foreign libskia "_ZN10SkTypeface8RegisterEjPF5sk_spIS_ESt10unique_ptrI13SkStreamAssetSt14default_deleteIS3_EERK15SkFontArgumentsE";
-
-    // needed until onGetTableTags() is updated to take a span
-    anon_enum_20 :: enum u32 {
-        MAX_REASONABLE_TABLE_COUNT :: 65535;
-    }
-
-    Constructor :: (this: *SkTypeface, style: *SkFontStyle, isFixedPitch := false) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceC2ERK11SkFontStyleb";
-    Constructor :: (this: *SkTypeface, style: SkFontStyle, isFixedPitch := false) #no_context {
-        Constructor(this, *style, isFixedPitch);
-    }
-    Destructor_Base :: (this: *SkTypeface) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceD2Ev";
-
-    /** Sets the fixedPitch bit. If used, must be called in the constructor. */
-//     setIsFixedPitch :: (this: *SkTypeface, isFixedPitch: bool) -> void #cpp_method #foreign libskia "_ZN10SkTypeface15setIsFixedPitchEb";
-
-    /** Sets the font style. If used, must be called in the constructor. */
-//     setFontStyle :: (this: *SkTypeface, style: SkFontStyle) -> void #cpp_method #foreign libskia "_ZN10SkTypeface12setFontStyleE11SkFontStyle";
-
-    /** Returns true if the typeface's glyph masks may refer to the foreground
-    *  paint foreground color. This is needed to determine caching requirements. Usually true for
-    *  typefaces that contain a COLR table.
-    */
-    glyphMaskNeedsCurrentColor :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface26glyphMaskNeedsCurrentColorEv";
-
-    /** Retrieve detailed typeface metrics.  Used by the PDF backend.  */
-    getAdvancedMetrics :: (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface18getAdvancedMetricsEv";
-
-    fUniqueID:         SkTypefaceID;
-    fStyle:            SkFontStyle;
-    fBounds:           SkRect;
-    fBoundsOnce:       SkOnce;
-    fIsFixedPitch:     bool;
-
-    INHERITED :: SkWeakRefCnt;
-
-    // Virtual functions:
-    // Normally you should call them via the vtable.
-    // But these bindings can be useful if you need to call the parent implementation in a sub-struct’s overwritten method
-    // or need to create a vtable yourself.
-
-    virtual_Destructor :: (this: *SkTypeface) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceD1Ev";
-    virtual_Destructor_Deleting :: (this: *SkTypeface) -> void #cpp_method #foreign libskia "_ZN10SkTypefaceD0Ev";
-
-//     virtual_onMakeClone :: (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface11onMakeCloneERK15SkFontArguments";
-
-    virtual_onGetFontStyle :: (this: *SkTypeface) -> SkFontStyle #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetFontStyleEv";
-
-    virtual_onGetFixedPitch :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface15onGetFixedPitchEv";
-
-    // Must return a valid scaler context. It can not return nullptr.
-//     virtual_onCreateScalerContext :: (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface21onCreateScalerContextERK22SkScalerContextEffectsPK12SkDescriptor";
-
-    virtual_onCreateScalerContextAsProxyTypeface :: (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor, proxyTypeface: *SkTypeface) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface36onCreateScalerContextAsProxyTypefaceERK22SkScalerContextEffectsPK12SkDescriptorPS_";
-
-//     virtual_onFilterRec :: (this: *SkTypeface, unknown0: *SkScalerContextRec) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface11onFilterRecEP18SkScalerContextRec";
-
-    //  Subclasses *must* override this method to work with the PDF backend.
-//     virtual_onGetAdvancedMetrics :: (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface20onGetAdvancedMetricsEv";
-
-    // For type1 postscript fonts only, set the glyph names for each glyph.
-    // destination array is non-null, and points to an array of size this->countGlyphs().
-    // Backends that do not suport type1 fonts should not override.
-//     virtual_getPostScriptGlyphNames :: (this: *SkTypeface, unknown0: *SkString) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface23getPostScriptGlyphNamesEP8SkString";
-
-    // The mapping from glyph to Unicode; array indices are glyph ids.
-    // For each glyph, give the default Unicode value, if it exists.
-    // dstArray is non-null, and points to an array of size this->countGlyphs().
-    virtual_getGlyphToUnicodeMap :: (this: *SkTypeface, dstArray: SkSpan(SkUnichar)) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface20getGlyphToUnicodeMapE6SkSpanIiE";
-
-//     virtual_onOpenStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface12onOpenStreamEPi";
-
-    virtual_onOpenExistingStream :: (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface20onOpenExistingStreamEPi";
-
-//     virtual_onGlyphMaskNeedsCurrentColor :: (this: *SkTypeface) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface28onGlyphMaskNeedsCurrentColorEv";
-
-//     virtual_onGetVariationDesignPosition :: (this: *SkTypeface, unknown0: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface28onGetVariationDesignPositionE6SkSpanIN15SkFontArguments17VariationPosition10CoordinateEE";
-
-//     virtual_onGetVariationDesignParameters :: (this: *SkTypeface, unknown0: SkSpan(SkFontParameters.Variation.Axis)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface30onGetVariationDesignParametersE6SkSpanIN16SkFontParameters9Variation4AxisEE";
-
-//     virtual_onGetFontDescriptor :: (this: *SkTypeface, unknown0: *SkFontDescriptor, isLocal: *bool) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface19onGetFontDescriptorEP16SkFontDescriptorPb";
-
-//     virtual_onCharsToGlyphs :: (this: *SkTypeface, unknown0: SkSpan(SkUnichar), unknown1: SkSpan(SkGlyphID)) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface15onCharsToGlyphsE6SkSpanIKiES0_ItE";
-//     virtual_onCountGlyphs :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface13onCountGlyphsEv";
-
-//     virtual_onGetUPEM :: (this: *SkTypeface) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface9onGetUPEMEv";
-    virtual_onGetKerningPairAdjustments :: (this: *SkTypeface, unknown0: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface27onGetKerningPairAdjustmentsE6SkSpanIKtES0_IiE";
-
-    /** Returns the family name of the typeface as known by its font manager.
-    *  This name may or may not be produced by the family name iterator.
-    */
-//     virtual_onGetFamilyName :: (this: *SkTypeface, familyName: *SkString) -> void #cpp_method #foreign libskia "_ZNK10SkTypeface15onGetFamilyNameEP8SkString";
-//     virtual_onGetPostScriptName :: (this: *SkTypeface, unknown0: *SkString) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface19onGetPostScriptNameEP8SkString";
-    virtual_onGetResourceName :: (this: *SkTypeface, resourceName: *SkString) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface17onGetResourceNameEP8SkString";
-
-    /** Returns an iterator over the family names in the font. */
-//     virtual_onCreateFamilyNameIterator :: (this: *SkTypeface) -> *SkTypeface.LocalizedStrings #cpp_method #foreign libskia "_ZNK10SkTypeface26onCreateFamilyNameIteratorEv";
-
-//     virtual_onGetTableTags :: (this: *SkTypeface, unknown0: SkSpan(SkFontTableTag)) -> s32 #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetTableTagsE6SkSpanIjE";
-//     virtual_onGetTableData :: (this: *SkTypeface, unknown0: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetTableDataEjmmPv";
-
-    virtual_onCopyTableData :: (this: *SkTypeface, unknown0: SkFontTableTag) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTypeface15onCopyTableDataEj";
-
-    virtual_onComputeBounds :: (this: *SkTypeface, unknown0: *SkRect) -> bool #cpp_method #foreign libskia "_ZNK10SkTypeface15onComputeBoundsEP6SkRect";
-
-//     virtual_onGetCTFontRef :: (this: *SkTypeface) -> *void #cpp_method #foreign libskia "_ZNK10SkTypeface14onGetCTFontRefEv";
-}
-SkTypeface_VTable :: struct #type_info_none {
-    using,except(vtable) vtable:                               SkWeakRefCnt_VTable;
-
-    onMakeClone:                          #type (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) #cpp_method #cpp_return_type_is_non_pod;
-
-    onGetFontStyle:                       #type (this: *SkTypeface) -> SkFontStyle #cpp_method;
-
-    onGetFixedPitch:                      #type (this: *SkTypeface) -> bool #cpp_method;
-
-    onCreateScalerContext:                #type (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod;
-
-    onCreateScalerContextAsProxyTypeface: #type (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor, proxyTypeface: *SkTypeface) -> std.unique_ptr(SkScalerContext) #cpp_method #cpp_return_type_is_non_pod;
-
-    onFilterRec:                          #type (this: *SkTypeface, unknown0: *SkScalerContextRec) -> void #cpp_method;
-
-    onGetAdvancedMetrics:                 #type (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) #cpp_method #cpp_return_type_is_non_pod;
-
-    getPostScriptGlyphNames:              #type (this: *SkTypeface, unknown0: *SkString) -> void #cpp_method;
-
-    getGlyphToUnicodeMap:                 #type (this: *SkTypeface, dstArray: SkSpan(SkUnichar)) -> void #cpp_method;
-
-    onOpenStream:                         #type (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod;
-
-    onOpenExistingStream:                 #type (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) #cpp_method #cpp_return_type_is_non_pod;
-
-    onGlyphMaskNeedsCurrentColor:         #type (this: *SkTypeface) -> bool #cpp_method;
-
-    onGetVariationDesignPosition:         #type (this: *SkTypeface, unknown0: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 #cpp_method;
-
-    onGetVariationDesignParameters:       #type (this: *SkTypeface, unknown0: SkSpan(SkFontParameters.Variation.Axis)) -> s32 #cpp_method;
-
-    onGetFontDescriptor:                  #type (this: *SkTypeface, unknown0: *SkFontDescriptor, isLocal: *bool) -> void #cpp_method;
-
-    onCharsToGlyphs:                      #type (this: *SkTypeface, unknown0: SkSpan(SkUnichar), unknown1: SkSpan(SkGlyphID)) -> void #cpp_method;
-    onCountGlyphs:                        #type (this: *SkTypeface) -> s32 #cpp_method;
-
-    onGetUPEM:                            #type (this: *SkTypeface) -> s32 #cpp_method;
-    onGetKerningPairAdjustments:          #type (this: *SkTypeface, unknown0: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool #cpp_method;
-
-    onGetFamilyName:                      #type (this: *SkTypeface, familyName: *SkString) -> void #cpp_method;
-    onGetPostScriptName:                  #type (this: *SkTypeface, unknown0: *SkString) -> bool #cpp_method;
-    onGetResourceName:                    #type (this: *SkTypeface, resourceName: *SkString) -> s32 #cpp_method;
-
-    onCreateFamilyNameIterator:           #type (this: *SkTypeface) -> *SkTypeface.LocalizedStrings #cpp_method;
-
-    onGetTableTags:                       #type (this: *SkTypeface, unknown0: SkSpan(SkFontTableTag)) -> s32 #cpp_method;
-    onGetTableData:                       #type (this: *SkTypeface, unknown0: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 #cpp_method;
-
-    onCopyTableData:                      #type (this: *SkTypeface, unknown0: SkFontTableTag) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod;
-
-    onComputeBounds:                      #type (this: *SkTypeface, unknown0: *SkRect) -> bool #cpp_method;
-
-    onGetCTFontRef:                       #type (this: *SkTypeface) -> *void #cpp_method;
-}
-SkTypeface_onMakeClone :: inline (this: *SkTypeface, unknown0: *SkFontArguments) -> sk_sp(SkTypeface) { return this.vtable.onMakeClone(this, unknown0); }
-
-SkTypeface_onGetFontStyle :: inline (this: *SkTypeface) -> SkFontStyle { return this.vtable.onGetFontStyle(this); }
-
-SkTypeface_onGetFixedPitch :: inline (this: *SkTypeface) -> bool { return this.vtable.onGetFixedPitch(this); }
-
-SkTypeface_onCreateScalerContext :: inline (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor) -> std.unique_ptr(SkScalerContext) { return this.vtable.onCreateScalerContext(this, unknown0, unknown1); }
-
-SkTypeface_onCreateScalerContextAsProxyTypeface :: inline (this: *SkTypeface, unknown0: *SkScalerContextEffects, unknown1: *SkDescriptor, proxyTypeface: *SkTypeface) -> std.unique_ptr(SkScalerContext) { return this.vtable.onCreateScalerContextAsProxyTypeface(this, unknown0, unknown1, proxyTypeface); }
-
-SkTypeface_onFilterRec :: inline (this: *SkTypeface, unknown0: *SkScalerContextRec) { this.vtable.onFilterRec(this, unknown0); }
-
-SkTypeface_onGetAdvancedMetrics :: inline (this: *SkTypeface) -> std.unique_ptr(SkAdvancedTypefaceMetrics) { return this.vtable.onGetAdvancedMetrics(this); }
-
-SkTypeface_getPostScriptGlyphNames :: inline (this: *SkTypeface, unknown0: *SkString) { this.vtable.getPostScriptGlyphNames(this, unknown0); }
-
-SkTypeface_getGlyphToUnicodeMap :: inline (this: *SkTypeface, dstArray: SkSpan(SkUnichar)) { this.vtable.getGlyphToUnicodeMap(this, dstArray); }
-
-SkTypeface_onOpenStream :: inline (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) { return this.vtable.onOpenStream(this, ttcIndex); }
-
-SkTypeface_onOpenExistingStream :: inline (this: *SkTypeface, ttcIndex: *s32) -> std.unique_ptr(SkStreamAsset) { return this.vtable.onOpenExistingStream(this, ttcIndex); }
-
-SkTypeface_onGlyphMaskNeedsCurrentColor :: inline (this: *SkTypeface) -> bool { return this.vtable.onGlyphMaskNeedsCurrentColor(this); }
-
-SkTypeface_onGetVariationDesignPosition :: inline (this: *SkTypeface, unknown0: SkSpan(SkFontArguments.VariationPosition.Coordinate)) -> s32 { return this.vtable.onGetVariationDesignPosition(this, unknown0); }
-
-SkTypeface_onGetVariationDesignParameters :: inline (this: *SkTypeface, unknown0: SkSpan(SkFontParameters.Variation.Axis)) -> s32 { return this.vtable.onGetVariationDesignParameters(this, unknown0); }
-
-SkTypeface_onGetFontDescriptor :: inline (this: *SkTypeface, unknown0: *SkFontDescriptor, isLocal: *bool) { this.vtable.onGetFontDescriptor(this, unknown0, isLocal); }
-
-SkTypeface_onCharsToGlyphs :: inline (this: *SkTypeface, unknown0: SkSpan(SkUnichar), unknown1: SkSpan(SkGlyphID)) { this.vtable.onCharsToGlyphs(this, unknown0, unknown1); }
-SkTypeface_onCountGlyphs :: inline (this: *SkTypeface) -> s32 { return this.vtable.onCountGlyphs(this); }
-
-SkTypeface_onGetUPEM :: inline (this: *SkTypeface) -> s32 { return this.vtable.onGetUPEM(this); }
-SkTypeface_onGetKerningPairAdjustments :: inline (this: *SkTypeface, unknown0: SkSpan(SkGlyphID), adjustments: SkSpan(s32)) -> bool { return this.vtable.onGetKerningPairAdjustments(this, unknown0, adjustments); }
-
-SkTypeface_onGetFamilyName :: inline (this: *SkTypeface, familyName: *SkString) { this.vtable.onGetFamilyName(this, familyName); }
-SkTypeface_onGetPostScriptName :: inline (this: *SkTypeface, unknown0: *SkString) -> bool { return this.vtable.onGetPostScriptName(this, unknown0); }
-SkTypeface_onGetResourceName :: inline (this: *SkTypeface, resourceName: *SkString) -> s32 { return this.vtable.onGetResourceName(this, resourceName); }
-
-SkTypeface_onCreateFamilyNameIterator :: inline (this: *SkTypeface) -> *SkTypeface.LocalizedStrings { return this.vtable.onCreateFamilyNameIterator(this); }
-
-SkTypeface_onGetTableTags :: inline (this: *SkTypeface, unknown0: SkSpan(SkFontTableTag)) -> s32 { return this.vtable.onGetTableTags(this, unknown0); }
-SkTypeface_onGetTableData :: inline (this: *SkTypeface, unknown0: SkFontTableTag, offset: u64, length: u64, data: *void) -> u64 { return this.vtable.onGetTableData(this, unknown0, offset, length, data); }
-
-SkTypeface_onCopyTableData :: inline (this: *SkTypeface, unknown0: SkFontTableTag) -> sk_sp(SkData) { return this.vtable.onCopyTableData(this, unknown0); }
-
-SkTypeface_onComputeBounds :: inline (this: *SkTypeface, unknown0: *SkRect) -> bool { return this.vtable.onComputeBounds(this, unknown0); }
-
-SkTypeface_onGetCTFontRef :: inline (this: *SkTypeface) -> *void { return this.vtable.onGetCTFontRef(this); }
-
-get_vtable :: (obj: *SkTypeface) -> *SkTypeface_VTable { return obj.vtable; }
-
-
 /**
 *  SkData holds a data buffer. It can be created to allocate its own buffer
 *  for the contents, or to share a pointer to the client's buffer. The size and
@@ -16610,6 +17363,595 @@ SkDynamicMemoryWStream__RAW :: struct {
 
     virtual_write :: (this: *SkDynamicMemoryWStream, buffer: *void, size: u64) -> bool #cpp_method #foreign libskia "_ZN22SkDynamicMemoryWStream5writeEPKvm";
     virtual_bytesWritten :: (this: *SkDynamicMemoryWStream) -> u64 #cpp_method #foreign libskia "_ZNK22SkDynamicMemoryWStream12bytesWrittenEv";
+}
+
+// The sknonstd namespace contains things we would like to be proposed and feel std-ish.
+sknonstd :: struct {
+    // The name 'copy' here is fraught with peril. In this case it means 'append', not 'overwrite'.
+    // Alternate proposed names are 'propagate', 'augment', or 'append' (and 'add', but already taken).
+    // std::experimental::propagate_const already exists for other purposes in TSv2.
+    // These also follow the <dest, source> pattern used by boost.
+    copy_const :: struct(D: Type, S: Type) {
+        using,except(D, S) copy_const__raw:        copy_const__RAW(D, S);
+        #if size_of(copy_const__RAW(D, S)) == 0 {
+            __empty_struct_padding: u8; // C++ makes empty structs have length 1
+        }
+    }
+        // copy_const without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from copy_const
+    copy_const__RAW :: struct(D: Type, S: Type) {}
+
+    copy_volatile :: struct(D: Type, S: Type) {
+        using,except(D, S) copy_volatile__raw:     copy_volatile__RAW(D, S);
+        #if size_of(copy_volatile__RAW(D, S)) == 0 {
+            __empty_struct_padding: u8; // C++ makes empty structs have length 1
+        }
+    }
+        // copy_volatile without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from copy_volatile
+    copy_volatile__RAW :: struct(D: Type, S: Type) {}
+
+    copy_cv :: struct(D: Type, S: Type) {
+        using,except(D, S) copy_cv__raw:           copy_cv__RAW(D, S);
+        #if size_of(copy_cv__RAW(D, S)) == 0 {
+            __empty_struct_padding: u8; // C++ makes empty structs have length 1
+        }
+    }
+        // copy_cv without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from copy_cv
+    copy_cv__RAW :: struct(D: Type, S: Type) {}
+}
+
+SkOverloadedFunctionObject :: struct(T: Type, P: Type) {
+    using,except(T, P) skoverloadedfunctionobject__raw: SkOverloadedFunctionObject__RAW(T, P);
+    #if size_of(SkOverloadedFunctionObject__RAW(T, P)) == 0 {
+        __empty_struct_padding:          u8; // C++ makes empty structs have length 1
+    }
+}
+// SkOverloadedFunctionObject without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from SkOverloadedFunctionObject
+SkOverloadedFunctionObject__RAW :: struct(T: Type, P: Type) {}
+
+/** \class SkAutoTCallVProc
+
+Call a function when this goes out of scope. The template uses two
+parameters, the object, and a function that is to be called in the destructor.
+If release() is called, the object reference is set to null. If the object
+reference is null when the destructor is called, we do not call the
+function.
+*/
+SkAutoTCallVProc :: struct(T: Type, P: #type (unknown0: *T) -> void #c_call) {
+    using,except(T, P) skautotcallvproc__raw:  SkAutoTCallVProc__RAW(T, P);
+    #if size_of(SkAutoTCallVProc__RAW(T, P)) == 0 {
+        __empty_struct_padding: u8; // C++ makes empty structs have length 1
+    }
+}
+// SkAutoTCallVProc without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from SkAutoTCallVProc
+SkAutoTCallVProc__RAW :: struct(T: Type, P: #type (unknown0: *T) -> void #c_call) {}
+
+/** \class SkTextBlob
+SkTextBlob combines multiple text runs into an immutable container. Each text
+run consists of glyphs, SkPaint, and position. Only parts of SkPaint related to
+fonts and text rendering are used by run.
+*/
+SkTextBlob :: struct {
+    #as using sknvrefcnt: SkNVRefCnt(SkTextBlob);
+
+    RunRecord :: struct {}
+
+    /** Returns conservative bounding box. Uses SkPaint associated with each glyph to
+    determine glyph bounds, and unions all bounds. Returned bounds may be
+    larger than the bounds of all glyphs in runs.
+    
+    @return  conservative bounding box
+    */
+//     bounds :: (this: *SkTextBlob) -> *SkRect #cpp_method #foreign libskia "_ZNK10SkTextBlob6boundsEv";
+
+    /** Returns a non-zero value unique among all text blobs.
+    
+    @return  identifier for SkTextBlob
+    */
+//     uniqueID :: (this: *SkTextBlob) -> u32 #cpp_method #foreign libskia "_ZNK10SkTextBlob8uniqueIDEv";
+
+    /** Returns the number of intervals that intersect bounds.
+    bounds describes a pair of lines parallel to the text advance.
+    The return count is zero or a multiple of two, and is at most twice the number of glyphs in
+    the the blob.
+    
+    Pass nullptr for intervals to determine the size of the interval array.
+    
+    Runs within the blob that contain SkRSXform are ignored when computing intercepts.
+    
+    @param bounds     lower and upper line parallel to the advance
+    @param intervals  returned intersections; may be nullptr
+    @param paint      specifies stroking, SkPathEffect that affects the result; may be nullptr
+    @return           number of intersections; may be zero
+    */
+    getIntercepts :: (this: *SkTextBlob, bounds: *[2] SkScalar, intervals: *SkScalar, paint: *SkPaint = null) -> s32 #cpp_method #foreign libskia "_ZNK10SkTextBlob13getInterceptsEPKfPfPK7SkPaint";
+
+    /** Creates SkTextBlob with a single run.
+    
+    font contains attributes used to define the run text.
+    
+    When encoding is SkTextEncoding::kUTF8, SkTextEncoding::kUTF16, or
+    SkTextEncoding::kUTF32, this function uses the default
+    character-to-glyph mapping from the SkTypeface in font.  It does not
+    perform typeface fallback for characters not found in the SkTypeface.
+    It does not perform kerning or other complex shaping; glyphs are
+    positioned based on their default advances.
+    
+    @param text        character code points or glyphs drawn
+    @param byteLength  byte length of text array
+    @param font        text size, typeface, text scale, and so on, used to draw
+    @param encoding    text encoding used in the text array
+    @return            SkTextBlob constructed from one run
+    */
+    MakeFromText :: (text: *void, byteLength: u64, font: *SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob12MakeFromTextEPKvmRK6SkFont14SkTextEncoding";
+    MakeFromText :: (text: *void, byteLength: u64, font: SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromText(text, byteLength, *font, encoding);
+    }
+
+    /** Creates SkTextBlob with a single run. string meaning depends on SkTextEncoding;
+    by default, string is encoded as UTF-8.
+    
+    font contains attributes used to define the run text.
+    
+    When encoding is SkTextEncoding::kUTF8, SkTextEncoding::kUTF16, or
+    SkTextEncoding::kUTF32, this function uses the default
+    character-to-glyph mapping from the SkTypeface in font.  It does not
+    perform typeface fallback for characters not found in the SkTypeface.
+    It does not perform kerning or other complex shaping; glyphs are
+    positioned based on their default advances.
+    
+    @param string   character code points or glyphs drawn
+    @param font     text size, typeface, text scale, and so on, used to draw
+    @param encoding text encoding used in the text array
+    @return         SkTextBlob constructed from one run
+    */
+//     MakeFromString :: (_string: *u8, font: *SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob14MakeFromStringEPKcRK6SkFont14SkTextEncoding";
+    MakeFromString :: (_string: *u8, font: SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromString(_string, *font, encoding);
+    }
+
+    /** Returns a textblob built from a single run of text with x-positions and a single y value.
+    This is equivalent to using SkTextBlobBuilder and calling allocRunPosH().
+    Returns nullptr if byteLength is zero.
+    
+    @param text        character code points or glyphs drawn (based on encoding)
+    @param byteLength  byte length of text array
+    @param xpos    array of x-positions, must contain values for all of the character points.
+    @param constY  shared y-position for each character point, to be paired with each xpos.
+    @param font    SkFont used for this run
+    @param encoding specifies the encoding of the text array.
+    @return        new textblob or nullptr
+    */
+    MakeFromPosTextH :: (text: *void, byteLength: u64, xpos: SkSpan(SkScalar), constY: SkScalar, font: *SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob16MakeFromPosTextHEPKvm6SkSpanIKfEfRK6SkFont14SkTextEncoding";
+    MakeFromPosTextH :: (text: *void, byteLength: u64, xpos: SkSpan(SkScalar), constY: SkScalar, font: SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromPosTextH(text, byteLength, xpos, constY, *font, encoding);
+    }
+
+    /** Returns a textblob built from a single run of text with positions.
+    This is equivalent to using SkTextBlobBuilder and calling allocRunPos().
+    Returns nullptr if byteLength is zero.
+    
+    @param text        character code points or glyphs drawn (based on encoding)
+    @param byteLength  byte length of text array
+    @param pos     array of positions, must contain values for all of the character points.
+    @param font    SkFont used for this run
+    @param encoding specifies the encoding of the text array.
+    @return        new textblob or nullptr
+    */
+    MakeFromPosText :: (text: *void, byteLength: u64, pos: SkSpan(SkPoint), font: *SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob15MakeFromPosTextEPKvm6SkSpanIK7SkPointERK6SkFont14SkTextEncoding";
+    MakeFromPosText :: (text: *void, byteLength: u64, pos: SkSpan(SkPoint), font: SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromPosText(text, byteLength, pos, *font, encoding);
+    }
+
+    MakeFromRSXform :: (text: *void, byteLength: u64, xform: SkSpan(SkRSXform), font: *SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob15MakeFromRSXformEPKvm6SkSpanIK9SkRSXformERK6SkFont14SkTextEncoding";
+    MakeFromRSXform :: (text: *void, byteLength: u64, xform: SkSpan(SkRSXform), font: SkFont, encoding: SkTextEncoding = .UTF8) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromRSXform(text, byteLength, xform, *font, encoding);
+    }
+
+    // Helpers for glyphs
+//     MakeFromPosHGlyphs :: (glyphs: SkSpan(SkGlyphID), xpos: SkSpan(SkScalar), constY: SkScalar, font: *SkFont) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob18MakeFromPosHGlyphsE6SkSpanIKtES0_IKfEfRK6SkFont";
+    MakeFromPosHGlyphs :: (glyphs: SkSpan(SkGlyphID), xpos: SkSpan(SkScalar), constY: SkScalar, font: SkFont) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromPosHGlyphs(glyphs, xpos, constY, *font);
+    }
+
+//     MakeFromPosGlyphs :: (glyphs: SkSpan(SkGlyphID), pos: SkSpan(SkPoint), font: *SkFont) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob17MakeFromPosGlyphsE6SkSpanIKtES0_IK7SkPointERK6SkFont";
+    MakeFromPosGlyphs :: (glyphs: SkSpan(SkGlyphID), pos: SkSpan(SkPoint), font: SkFont) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromPosGlyphs(glyphs, pos, *font);
+    }
+
+//     MakeFromRSXformGlyphs :: (glyphs: SkSpan(SkGlyphID), xform: SkSpan(SkRSXform), font: *SkFont) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob21MakeFromRSXformGlyphsE6SkSpanIKtES0_IK9SkRSXformERK6SkFont";
+    MakeFromRSXformGlyphs :: (glyphs: SkSpan(SkGlyphID), xform: SkSpan(SkRSXform), font: SkFont) -> sk_sp(SkTextBlob) #no_context {
+        return MakeFromRSXformGlyphs(glyphs, xform, *font);
+    }
+
+    /** Writes data to allow later reconstruction of SkTextBlob. memory points to storage
+    to receive the encoded data, and memory_size describes the size of storage.
+    Returns bytes used if provided storage is large enough to hold all data;
+    otherwise, returns zero.
+    
+    procs.fTypefaceProc permits supplying a custom function to encode SkTypeface.
+    If procs.fTypefaceProc is nullptr, default encoding is used. procs.fTypefaceCtx
+    may be used to provide user context to procs.fTypefaceProc; procs.fTypefaceProc
+    is called with a pointer to SkTypeface and user context.
+    
+    @param procs       custom serial data encoders; may be nullptr
+    @param memory      storage for data
+    @param memory_size size of storage
+    @return            bytes written, or zero if required storage is larger than memory_size
+    
+    example: https://fiddle.skia.org/c/@TextBlob_serialize
+    */
+    serialize :: (this: *SkTextBlob, procs: *SkSerialProcs, memory: *void, memory_size: u64) -> u64 #cpp_method #foreign libskia "_ZNK10SkTextBlob9serializeERK13SkSerialProcsPvm";
+    serialize :: (this: *SkTextBlob, procs: SkSerialProcs, memory: *void, memory_size: u64) -> u64 #no_context {
+        return serialize(this, *procs, memory, memory_size);
+    }
+
+    /** Returns storage containing SkData describing SkTextBlob, using optional custom
+    encoders.
+    
+    procs.fTypefaceProc permits supplying a custom function to encode SkTypeface.
+    If procs.fTypefaceProc is nullptr, default encoding is used. procs.fTypefaceCtx
+    may be used to provide user context to procs.fTypefaceProc; procs.fTypefaceProc
+    is called with a pointer to SkTypeface and user context.
+    
+    @param procs  custom serial data encoders; may be nullptr
+    @return       storage containing serialized SkTextBlob
+    
+    example: https://fiddle.skia.org/c/@TextBlob_serialize_2
+    */
+    serialize :: (this: *SkTextBlob, procs: *SkSerialProcs) -> sk_sp(SkData) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZNK10SkTextBlob9serializeERK13SkSerialProcs";
+    serialize :: (this: *SkTextBlob, procs: SkSerialProcs) -> sk_sp(SkData) #no_context {
+        return serialize(this, *procs);
+    }
+
+    /** Recreates SkTextBlob that was serialized into data. Returns constructed SkTextBlob
+    if successful; otherwise, returns nullptr. Fails if size is smaller than
+    required data length, or if data does not permit constructing valid SkTextBlob.
+    
+    procs.fTypefaceProc permits supplying a custom function to decode SkTypeface.
+    If procs.fTypefaceProc is nullptr, default decoding is used. procs.fTypefaceCtx
+    may be used to provide user context to procs.fTypefaceProc; procs.fTypefaceProc
+    is called with a pointer to SkTypeface data, data byte length, and user context.
+    
+    @param data   pointer for serial data
+    @param size   size of data
+    @param procs  custom serial data decoders; may be nullptr
+    @return       SkTextBlob constructed from data in memory
+    */
+    Deserialize :: (data: *void, size: u64, procs: *SkDeserialProcs) -> sk_sp(SkTextBlob) #cpp_return_type_is_non_pod #foreign libskia "_ZN10SkTextBlob11DeserializeEPKvmRK15SkDeserialProcs";
+    Deserialize :: (data: *void, size: u64, procs: SkDeserialProcs) -> sk_sp(SkTextBlob) #no_context {
+        return Deserialize(data, size, *procs);
+    }
+
+    Iter :: struct {
+        Run :: struct {
+            fTypeface:     *SkTypeface;
+            fGlyphCount:   s32;
+            fGlyphIndices: *SkGlyphID;
+        }
+
+        Constructor :: (this: *Iter, unknown0: *SkTextBlob) -> void #cpp_method #foreign libskia "_ZN10SkTextBlob4IterC1ERKS_";
+        Constructor :: (this: *Iter, unknown0: SkTextBlob) #no_context {
+            Constructor(this, *unknown0);
+        }
+
+        /**
+        * Returns true for each "run" inside the textblob, setting the Run fields (if not null).
+        * If this returns false, there are no more runs, and the Run parameter will be ignored.
+        */
+        next :: (this: *Iter, unknown0: *Run) -> bool #cpp_method #foreign libskia "_ZN10SkTextBlob4Iter4nextEPNS0_3RunE";
+
+        // Experimental, DO NO USE, will change/go-away
+        ExperimentalRun :: struct {
+            font:      SkFont;
+            count:     s32;
+            glyphs:    *SkGlyphID;
+            positions: *SkPoint;
+        }
+
+        experimentalNext :: (this: *Iter, unknown0: *ExperimentalRun) -> bool #cpp_method #foreign libskia "_ZN10SkTextBlob4Iter16experimentalNextEPNS0_15ExperimentalRunE";
+
+        fRunRecord: *RunRecord;
+    }
+
+    GlyphPositioning :: enum u8 {
+    }
+
+    Constructor :: (this: *SkTextBlob, bounds: *SkRect) -> void #cpp_method #foreign libskia "_ZN10SkTextBlobC1ERK6SkRect";
+    Constructor :: (this: *SkTextBlob, bounds: SkRect) #no_context {
+        Constructor(this, *bounds);
+    }
+
+    Destructor_Base :: (this: *SkTextBlob) -> void #cpp_method #foreign libskia "_ZN10SkTextBlobD2Ev";
+    Destructor :: (this: *SkTextBlob) -> void #cpp_method #foreign libskia "_ZN10SkTextBlobD1Ev";
+
+    ScalarsPerGlyph :: (pos: GlyphPositioning) -> u32 #foreign libskia "_ZN10SkTextBlob15ScalarsPerGlyphENS_16GlyphPositioningE";
+
+    PurgeDelegate :: #type (blobID: u32, cacheID: u32) -> void #c_call;
+
+    // Call when this blob is part of the key to a cache entry. This allows the cache
+    // to know automatically those entries can be purged when this SkTextBlob is deleted.
+//     notifyAddedToCache :: (this: *SkTextBlob, cacheID: u32, purgeDelegate: PurgeDelegate) -> void #cpp_method #foreign libskia "_ZNK10SkTextBlob18notifyAddedToCacheEjPFvjjE";
+
+    fCacheID:             std.atomic(u32);
+
+    fStorageSize:         u64;
+
+    // The actual payload resides in externally-managed storage, following the object.
+    // (see the .cpp for more details)
+    INHERITED :: SkRefCnt;
+}
+
+// Memory for objects of this class is created with sk_malloc rather than operator new and must
+// be freed with sk_free.
+operatordelete :: (this: *SkTextBlob, p: *void) -> void #cpp_method #foreign libskia "_ZN10SkTextBlobdlEPv";
+operatordelete :: (this: SkTextBlob, p: *void) #no_context {
+    operatordelete(*this, p);
+}
+operatornew :: (this: *SkTextBlob, unknown0: u64) -> *void #cpp_method #foreign libskia "_ZN10SkTextBlobnwEm";
+operatornew :: (this: SkTextBlob, unknown0: u64) -> *void #no_context {
+    return operatornew(*this, unknown0);
+}
+operatornew :: (this: *SkTextBlob, unknown0: u64, p: *void) -> *void #cpp_method #foreign libskia "_ZN10SkTextBlobnwEmPv";
+operatornew :: (this: SkTextBlob, unknown0: u64, p: *void) -> *void #no_context {
+    return operatornew(*this, unknown0, p);
+}
+
+/** \class SkTextBlobBuilder
+Helper class for constructing SkTextBlob.
+*/
+SkTextBlobBuilder :: struct {
+    /** Constructs empty SkTextBlobBuilder. By default, SkTextBlobBuilder has no runs.
+    
+    @return  empty SkTextBlobBuilder
+    
+    example: https://fiddle.skia.org/c/@TextBlobBuilder_empty_constructor
+    */
+    Constructor :: (this: *SkTextBlobBuilder) -> void #cpp_method #foreign libskia "_ZN17SkTextBlobBuilderC1Ev";
+
+    /** Deletes data allocated internally by SkTextBlobBuilder.
+    */
+    Destructor_Base :: (this: *SkTextBlobBuilder) -> void #cpp_method #foreign libskia "_ZN17SkTextBlobBuilderD2Ev";
+    /** Deletes data allocated internally by SkTextBlobBuilder.
+    */
+    Destructor :: (this: *SkTextBlobBuilder) -> void #cpp_method #foreign libskia "_ZN17SkTextBlobBuilderD1Ev";
+
+    /** Returns SkTextBlob built from runs of glyphs added by builder. Returned
+    SkTextBlob is immutable; it may be copied, but its contents may not be altered.
+    Returns nullptr if no runs of glyphs were added by builder.
+    
+    Resets SkTextBlobBuilder to its initial empty state, allowing it to be
+    reused to build a new set of runs.
+    
+    @return  SkTextBlob or nullptr
+    
+    example: https://fiddle.skia.org/c/@TextBlobBuilder_make
+    */
+    make :: (this: *SkTextBlobBuilder) -> sk_sp(SkTextBlob) #cpp_method #cpp_return_type_is_non_pod #foreign libskia "_ZN17SkTextBlobBuilder4makeEv";
+
+    /** \struct SkTextBlobBuilder::RunBuffer
+    RunBuffer supplies storage for glyphs and positions within a run.
+    
+    A run is a sequence of glyphs sharing font metrics and positioning.
+    Each run may position its glyphs in one of three ways:
+    by specifying where the first glyph is drawn, and allowing font metrics to
+    determine the advance to subsequent glyphs; by specifying a baseline, and
+    the position on that baseline for each glyph in run; or by providing SkPoint
+    array, one per glyph.
+    */
+    RunBuffer :: struct {
+        glyphs:   *SkGlyphID; //!< storage for glyph indexes in run
+        pos:      *SkScalar; //!< storage for glyph positions in run
+        utf8text: *u8; //!< storage for text UTF-8 code units in run
+        clusters: *u32; //!< storage for glyph clusters (index of UTF-8 code unit)
+
+        // Helpers, since the "pos" field can be different types (always some number of floats).
+//         points :: (this: *RunBuffer) -> *SkPoint #cpp_method #foreign libskia "_ZNK17SkTextBlobBuilder9RunBuffer6pointsEv";
+//         xforms :: (this: *RunBuffer) -> *SkRSXform #cpp_method #foreign libskia "_ZNK17SkTextBlobBuilder9RunBuffer6xformsEv";
+    }
+
+    /** Returns run with storage for glyphs. Caller must write count glyphs to
+    RunBuffer::glyphs before next call to SkTextBlobBuilder.
+    
+    RunBuffer::pos, RunBuffer::utf8text, and RunBuffer::clusters should be ignored.
+    
+    Glyphs share metrics in font.
+    
+    Glyphs are positioned on a baseline at (x, y), using font metrics to
+    determine their relative placement.
+    
+    bounds defines an optional bounding box, used to suppress drawing when SkTextBlob
+    bounds does not intersect SkSurface bounds. If bounds is nullptr, SkTextBlob bounds
+    is computed from (x, y) and RunBuffer::glyphs metrics.
+    
+    @param font    SkFont used for this run
+    @param count   number of glyphs
+    @param x       horizontal offset within the blob
+    @param y       vertical offset within the blob
+    @param bounds  optional run bounding box
+    @return writable glyph buffer
+    */
+    allocRun :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, x: SkScalar, y: SkScalar, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder8allocRunERK6SkFontiffPK6SkRect";
+    allocRun :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, x: SkScalar, y: SkScalar, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRun(this, *font, count, x, y, bounds);
+    }
+
+    /** Returns run with storage for glyphs and positions along baseline. Caller must
+    write count glyphs to RunBuffer::glyphs and count scalars to RunBuffer::pos
+    before next call to SkTextBlobBuilder.
+    
+    RunBuffer::utf8text and RunBuffer::clusters should be ignored.
+    
+    Glyphs share metrics in font.
+    
+    Glyphs are positioned on a baseline at y, using x-axis positions written by
+    caller to RunBuffer::pos.
+    
+    bounds defines an optional bounding box, used to suppress drawing when SkTextBlob
+    bounds does not intersect SkSurface bounds. If bounds is nullptr, SkTextBlob bounds
+    is computed from y, RunBuffer::pos, and RunBuffer::glyphs metrics.
+    
+    @param font    SkFont used for this run
+    @param count   number of glyphs
+    @param y       vertical offset within the blob
+    @param bounds  optional run bounding box
+    @return writable glyph buffer and x-axis position buffer
+    */
+    allocRunPosH :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, y: SkScalar, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder12allocRunPosHERK6SkFontifPK6SkRect";
+    allocRunPosH :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, y: SkScalar, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRunPosH(this, *font, count, y, bounds);
+    }
+
+    /** Returns run with storage for glyphs and SkPoint positions. Caller must
+    write count glyphs to RunBuffer::glyphs and count SkPoint to RunBuffer::pos
+    before next call to SkTextBlobBuilder.
+    
+    RunBuffer::utf8text and RunBuffer::clusters should be ignored.
+    
+    Glyphs share metrics in font.
+    
+    Glyphs are positioned using SkPoint written by caller to RunBuffer::pos, using
+    two scalar values for each SkPoint.
+    
+    bounds defines an optional bounding box, used to suppress drawing when SkTextBlob
+    bounds does not intersect SkSurface bounds. If bounds is nullptr, SkTextBlob bounds
+    is computed from RunBuffer::pos, and RunBuffer::glyphs metrics.
+    
+    @param font    SkFont used for this run
+    @param count   number of glyphs
+    @param bounds  optional run bounding box
+    @return writable glyph buffer and SkPoint buffer
+    */
+    allocRunPos :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder11allocRunPosERK6SkFontiPK6SkRect";
+    allocRunPos :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRunPos(this, *font, count, bounds);
+    }
+
+    // RunBuffer.pos points to SkRSXform array
+    allocRunRSXform :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder15allocRunRSXformERK6SkFonti";
+    allocRunRSXform :: (this: *SkTextBlobBuilder, font: SkFont, count: s32) -> *RunBuffer #no_context {
+        return allocRunRSXform(this, *font, count);
+    }
+
+    /** Returns run with storage for glyphs, text, and clusters. Caller must
+    write count glyphs to RunBuffer::glyphs, textByteCount UTF-8 code units
+    into RunBuffer::utf8text, and count monotonic indexes into utf8text
+    into RunBuffer::clusters before next call to SkTextBlobBuilder.
+    
+    RunBuffer::pos should be ignored.
+    
+    Glyphs share metrics in font.
+    
+    Glyphs are positioned on a baseline at (x, y), using font metrics to
+    determine their relative placement.
+    
+    bounds defines an optional bounding box, used to suppress drawing when SkTextBlob
+    bounds does not intersect SkSurface bounds. If bounds is nullptr, SkTextBlob bounds
+    is computed from (x, y) and RunBuffer::glyphs metrics.
+    
+    @param font          SkFont used for this run
+    @param count         number of glyphs
+    @param x             horizontal offset within the blob
+    @param y             vertical offset within the blob
+    @param textByteCount number of UTF-8 code units
+    @param bounds        optional run bounding box
+    @return writable glyph buffer, text buffer, and cluster buffer
+    */
+    allocRunText :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, x: SkScalar, y: SkScalar, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder12allocRunTextERK6SkFontiffiPK6SkRect";
+    allocRunText :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, x: SkScalar, y: SkScalar, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRunText(this, *font, count, x, y, textByteCount, bounds);
+    }
+
+    /** Returns run with storage for glyphs, positions along baseline, text,
+    and clusters. Caller must write count glyphs to RunBuffer::glyphs,
+    count scalars to RunBuffer::pos, textByteCount UTF-8 code units into
+    RunBuffer::utf8text, and count monotonic indexes into utf8text into
+    RunBuffer::clusters before next call to SkTextBlobBuilder.
+    
+    Glyphs share metrics in font.
+    
+    Glyphs are positioned on a baseline at y, using x-axis positions written by
+    caller to RunBuffer::pos.
+    
+    bounds defines an optional bounding box, used to suppress drawing when SkTextBlob
+    bounds does not intersect SkSurface bounds. If bounds is nullptr, SkTextBlob bounds
+    is computed from y, RunBuffer::pos, and RunBuffer::glyphs metrics.
+    
+    @param font          SkFont used for this run
+    @param count         number of glyphs
+    @param y             vertical offset within the blob
+    @param textByteCount number of UTF-8 code units
+    @param bounds        optional run bounding box
+    @return writable glyph buffer, x-axis position buffer, text buffer, and cluster buffer
+    */
+    allocRunTextPosH :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, y: SkScalar, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder16allocRunTextPosHERK6SkFontifiPK6SkRect";
+    allocRunTextPosH :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, y: SkScalar, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRunTextPosH(this, *font, count, y, textByteCount, bounds);
+    }
+
+    /** Returns run with storage for glyphs, SkPoint positions, text, and
+    clusters. Caller must write count glyphs to RunBuffer::glyphs, count
+    SkPoint to RunBuffer::pos, textByteCount UTF-8 code units into
+    RunBuffer::utf8text, and count monotonic indexes into utf8text into
+    RunBuffer::clusters before next call to SkTextBlobBuilder.
+    
+    Glyphs share metrics in font.
+    
+    Glyphs are positioned using SkPoint written by caller to RunBuffer::pos, using
+    two scalar values for each SkPoint.
+    
+    bounds defines an optional bounding box, used to suppress drawing when SkTextBlob
+    bounds does not intersect SkSurface bounds. If bounds is nullptr, SkTextBlob bounds
+    is computed from RunBuffer::pos, and RunBuffer::glyphs metrics.
+    
+    @param font          SkFont used for this run
+    @param count         number of glyphs
+    @param textByteCount number of UTF-8 code units
+    @param bounds        optional run bounding box
+    @return writable glyph buffer, SkPoint buffer, text buffer, and cluster buffer
+    */
+    allocRunTextPos :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder15allocRunTextPosERK6SkFontiiPK6SkRect";
+    allocRunTextPos :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRunTextPos(this, *font, count, textByteCount, bounds);
+    }
+
+    // RunBuffer.pos points to SkRSXform array
+    allocRunTextRSXform :: (this: *SkTextBlobBuilder, font: *SkFont, count: s32, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder19allocRunTextRSXformERK6SkFontiiPK6SkRect";
+    allocRunTextRSXform :: (this: *SkTextBlobBuilder, font: SkFont, count: s32, textByteCount: s32, bounds: *SkRect = null) -> *RunBuffer #no_context {
+        return allocRunTextRSXform(this, *font, count, textByteCount, bounds);
+    }
+
+    reserve :: (this: *SkTextBlobBuilder, size: u64) -> void #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder7reserveEm";
+    allocInternal :: (this: *SkTextBlobBuilder, font: *SkFont, positioning: SkTextBlob.GlyphPositioning, count: s32, textBytes: s32, offset: SkPoint, bounds: *SkRect) -> void #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder13allocInternalERK6SkFontN10SkTextBlob16GlyphPositioningEii7SkPointPK6SkRect";
+    allocInternal :: (this: *SkTextBlobBuilder, font: SkFont, positioning: SkTextBlob.GlyphPositioning, count: s32, textBytes: s32, offset: SkPoint, bounds: *SkRect) #no_context {
+        allocInternal(this, *font, positioning, count, textBytes, offset, bounds);
+    }
+
+    mergeRun :: (this: *SkTextBlobBuilder, font: *SkFont, positioning: SkTextBlob.GlyphPositioning, count: u32, offset: SkPoint) -> bool #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder8mergeRunERK6SkFontN10SkTextBlob16GlyphPositioningEj7SkPoint";
+    mergeRun :: (this: *SkTextBlobBuilder, font: SkFont, positioning: SkTextBlob.GlyphPositioning, count: u32, offset: SkPoint) -> bool #no_context {
+        return mergeRun(this, *font, positioning, count, offset);
+    }
+
+    updateDeferredBounds :: (this: *SkTextBlobBuilder) -> void #cpp_method #foreign libskia "_ZN17SkTextBlobBuilder20updateDeferredBoundsEv";
+
+    ConservativeRunBounds :: (unknown0: *SkTextBlob.RunRecord) -> SkRect #foreign libskia "_ZN17SkTextBlobBuilder21ConservativeRunBoundsERKN10SkTextBlob9RunRecordE";
+    ConservativeRunBounds :: (unknown0: SkTextBlob.RunRecord) -> SkRect #no_context {
+        return ConservativeRunBounds(*unknown0);
+    }
+    TightRunBounds :: (unknown0: *SkTextBlob.RunRecord) -> SkRect #foreign libskia "_ZN17SkTextBlobBuilder14TightRunBoundsERKN10SkTextBlob9RunRecordE";
+    TightRunBounds :: (unknown0: SkTextBlob.RunRecord) -> SkRect #no_context {
+        return TightRunBounds(*unknown0);
+    }
+
+    fStorage:          skia_private.AutoTMalloc(u8);
+    fStorageSize:      u64;
+    fStorageUsed:      u64;
+
+    fBounds:           SkRect;
+    fRunCount:         s32;
+    fDeferredBounds:   bool;
+    fLastRun:          u64; // index into fStorage
+
+    fCurrentRunBuffer: RunBuffer;
 }
 
 /**
@@ -17778,66 +19120,6 @@ SkNoncopyable__RAW :: struct {
 operator_assign :: (this: *SkNoncopyable, unknown0: SkNoncopyable) -> *SkNoncopyable #no_context {
     return operator_assign(this, *unknown0);
 }
-
-// The sknonstd namespace contains things we would like to be proposed and feel std-ish.
-sknonstd :: struct {
-    // The name 'copy' here is fraught with peril. In this case it means 'append', not 'overwrite'.
-    // Alternate proposed names are 'propagate', 'augment', or 'append' (and 'add', but already taken).
-    // std::experimental::propagate_const already exists for other purposes in TSv2.
-    // These also follow the <dest, source> pattern used by boost.
-    copy_const :: struct(D: Type, S: Type) {
-        using,except(D, S) copy_const__raw:        copy_const__RAW(D, S);
-        #if size_of(copy_const__RAW(D, S)) == 0 {
-            __empty_struct_padding: u8; // C++ makes empty structs have length 1
-        }
-    }
-        // copy_const without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from copy_const
-    copy_const__RAW :: struct(D: Type, S: Type) {}
-
-    copy_volatile :: struct(D: Type, S: Type) {
-        using,except(D, S) copy_volatile__raw:     copy_volatile__RAW(D, S);
-        #if size_of(copy_volatile__RAW(D, S)) == 0 {
-            __empty_struct_padding: u8; // C++ makes empty structs have length 1
-        }
-    }
-        // copy_volatile without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from copy_volatile
-    copy_volatile__RAW :: struct(D: Type, S: Type) {}
-
-    copy_cv :: struct(D: Type, S: Type) {
-        using,except(D, S) copy_cv__raw:           copy_cv__RAW(D, S);
-        #if size_of(copy_cv__RAW(D, S)) == 0 {
-            __empty_struct_padding: u8; // C++ makes empty structs have length 1
-        }
-    }
-        // copy_cv without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from copy_cv
-    copy_cv__RAW :: struct(D: Type, S: Type) {}
-}
-
-SkOverloadedFunctionObject :: struct(T: Type, P: Type) {
-    using,except(T, P) skoverloadedfunctionobject__raw: SkOverloadedFunctionObject__RAW(T, P);
-    #if size_of(SkOverloadedFunctionObject__RAW(T, P)) == 0 {
-        __empty_struct_padding:          u8; // C++ makes empty structs have length 1
-    }
-}
-// SkOverloadedFunctionObject without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from SkOverloadedFunctionObject
-SkOverloadedFunctionObject__RAW :: struct(T: Type, P: Type) {}
-
-/** \class SkAutoTCallVProc
-
-Call a function when this goes out of scope. The template uses two
-parameters, the object, and a function that is to be called in the destructor.
-If release() is called, the object reference is set to null. If the object
-reference is null when the destructor is called, we do not call the
-function.
-*/
-SkAutoTCallVProc :: struct(T: Type, P: #type (unknown0: *T) -> void #c_call) {
-    using,except(T, P) skautotcallvproc__raw:  SkAutoTCallVProc__RAW(T, P);
-    #if size_of(SkAutoTCallVProc__RAW(T, P)) == 0 {
-        __empty_struct_padding: u8; // C++ makes empty structs have length 1
-    }
-}
-// SkAutoTCallVProc without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from SkAutoTCallVProc
-SkAutoTCallVProc__RAW :: struct(T: Type, P: #type (unknown0: *T) -> void #c_call) {}
 
 SkEncoder :: struct {
     vtable:               *SkEncoder_VTable;

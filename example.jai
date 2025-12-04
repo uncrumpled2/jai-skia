@@ -1,5 +1,5 @@
 #import "Basic";
-#import "skia"(lib_name="./libskia");
+#load "skia.jai";
 #import "POSIX"; 
 
 main :: () {
@@ -50,13 +50,13 @@ main :: () {
     white.fG = 1.0;
     white.fB = 1.0;
     white.fA = 1.0;
-    SkCanvas.drawColor(canvas, white, .Src); 
+    SkCanvas.drawColor(canvas, white, .Src);
 
     // Setup paint for red rect
     paint: SkPaint;
     SkPaint.Constructor(*paint);
     SkPaint.setColor(*paint, 0xFFFF0000); // Red
-    
+
     rect: SkRect;
     rect.fLeft = 100.0;
     rect.fTop = 100.0;
@@ -64,6 +64,36 @@ main :: () {
     rect.fBottom = 300.0;
 
     SkCanvas.drawRect(canvas, rect, paint);
+
+    // Test SkFont bindings
+    print("Testing SkFont bindings...\n");
+    font: SkFont;
+    SkFont.Constructor(*font); // Default constructor
+
+    print("  SkFont size: % bytes\n", size_of(SkFont));
+    print("  Font size (default): %\n", font.fSize);
+    print("  Font scaleX: %\n", font.fScaleX);
+    print("  Font skewX: %\n", font.fSkewX);
+
+    // Set font size
+    SkFont.setSize(*font, 24.0);
+    print("  Font size (after setSize 24): %\n", font.fSize);
+
+    // Draw text using the font
+    textPaint: SkPaint;
+    SkPaint.Constructor(*textPaint);
+    SkPaint.setColor(*textPaint, 0xFF000000); // Black
+
+    text := "Hello from Skia!";
+    SkCanvas.drawSimpleText(canvas, text.data, cast(u64)text.count, SkTextEncoding.kUTF8, 100.0, 450.0, font, textPaint);
+
+    // Test font metrics
+    metrics: SkFontMetrics;
+    spacing := SkFont.getMetrics(*font, *metrics);
+    print("  Font metrics - ascent: %, descent: %, leading: %\n", metrics.fAscent, metrics.fDescent, metrics.fLeading);
+    print("  Recommended line spacing: %\n", spacing);
+
+    SkPaint.Destructor(*textPaint);
 
     print("Drawing complete. Encoding to PNG...\n");
 

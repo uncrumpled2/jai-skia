@@ -46,10 +46,8 @@ String :: #import "String";
         // 1. Replace unknown library with libskia
         file_content = String.replace(file_content, "#foreign __UnknownLib", "#foreign libskia");
 
-        // 2. Prepend header with module parameters, imports, and std struct definitions
+        // 2. Prepend header with imports and std struct definitions
         header := #string END
-#module_parameters (lib_name := "skia");
-
 #import "Basic";
 #import "Math";
 #import "POSIX";
@@ -82,11 +80,7 @@ std :: struct {
 
 va_list :: *void;
 // FILE is imported from POSIX
-
-S16_MAX :: 32767;
-S32_MAX :: 2147483647;
-S64_MAX :: 9223372036854775807;
-S32_MIN :: -2147483648;
+// S16_MAX, S32_MAX, S64_MAX, S32_MIN are from Math module
 
 SK_FloatInfinity :: FLOAT32_INFINITY;
 
