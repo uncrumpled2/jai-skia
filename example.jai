@@ -65,35 +65,74 @@ main :: () {
 
     SkCanvas.drawRect(canvas, rect, paint);
 
-    // Test SkFont bindings
-    print("Testing SkFont bindings...\n");
-    font: SkFont;
-    SkFont.Constructor(*font); // Default constructor
+    // Test SkFont bindings with custom typeface
+    print("\nTesting SkFont bindings with custom typeface...\n");
 
-    print("  SkFont size: % bytes\n", size_of(SkFont));
-    print("  Font size (default): %\n", font.fSize);
-    print("  Font scaleX: %\n", font.fScaleX);
-    print("  Font skewX: %\n", font.fSkewX);
+    // Get a font manager that can load fonts from a directory
+    sp_fontmgr := SkFontMgr_New_Custom_Directory("/usr/share/fonts/truetype/dejavu");
+    fontmgr := sp_fontmgr.fPtr;
+    print("  Got font manager: %\n", fontmgr);
 
-    // Set font size
-    SkFont.setSize(*font, 24.0);
-    print("  Font size (after setSize 24): %\n", font.fSize);
+    // Load a typeface from a font file
+    sp_typeface := SkFontMgr.makeFromFile(fontmgr, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0);
+    typeface := sp_typeface.fPtr;
+    print("  Loaded typeface: %\n", typeface);
 
-    // Draw text using the font
-    textPaint: SkPaint;
-    SkPaint.Constructor(*textPaint);
-    SkPaint.setColor(*textPaint, 0xFF000000); // Black
+    if typeface {
+        print("  Typeface refcount: %\n", sk_ref_cnt_get_count(typeface));
 
-    text := "Hello from Skia!";
-    SkCanvas.drawSimpleText(canvas, text.data, cast(u64)text.count, SkTextEncoding.kUTF8, 100.0, 450.0, font, textPaint);
+        // Test the safe wrapper: SkFont_make (works around sk_sp by-value ABI issue)
+        print("  Creating font with SkFont_make (safe wrapper)...\n");
+        font := SkFont_make(typeface, 24.0);
+        print("  Font created successfully!\n");
+        print("  font.fTypeface.fPtr = %\n", font.fTypeface.fPtr);
+        print("  font.fSize = %\n", font.fSize);
+        print("  Typeface refcount after font creation: %\n", sk_ref_cnt_get_count(typeface));
 
-    // Test font metrics
-    metrics: SkFontMetrics;
-    spacing := SkFont.getMetrics(*font, *metrics);
-    print("  Font metrics - ascent: %, descent: %, leading: %\n", metrics.fAscent, metrics.fDescent, metrics.fLeading);
-    print("  Recommended line spacing: %\n", spacing);
+        // Get font metrics to verify the font is properly configured
+        metrics: SkFontMetrics;
+        spacing := SkFont.getMetrics(*font, *metrics);
+        print("  Font metrics - ascent: %, descent: %, leading: %\n", metrics.fAscent, metrics.fDescent, metrics.fLeading);
+        print("  Recommended line spacing: %\n", spacing);
 
-    SkPaint.Destructor(*textPaint);
+        // Draw text using the custom font
+        textPaint: SkPaint;
+        SkPaint.Constructor(*textPaint);
+        SkPaint.setColor(*textPaint, 0xFF000000); // Black
+
+        text := "Hello from Skia with DejaVu Sans!";
+        SkCanvas.drawSimpleText(canvas, text.data, cast(u64)text.count, SkTextEncoding.kUTF8, 100.0, 450.0, font, textPaint);
+
+        // Draw another line with different size
+        font2 := SkFont_make(typeface, 16.0);
+        text2 := "This is smaller text rendered with a custom typeface.";
+        SkCanvas.drawSimpleText(canvas, text2.data, cast(u64)text2.count, SkTextEncoding.kUTF8, 100.0, 500.0, font2, textPaint);
+
+        SkPaint.Destructor(*textPaint);
+
+        // Clean up fonts
+        SkFont_destroy(*font);
+        SkFont_destroy(*font2);
+        print("  Typeface refcount after font destruction: %\n", sk_ref_cnt_get_count(typeface));
+    } else {
+        print("  Failed to load typeface! Using default font...\n");
+
+        font: SkFont;
+        SkFont.Constructor(*font);
+        SkFont.setSize(*font, 24.0);
+
+        textPaint: SkPaint;
+        SkPaint.Constructor(*textPaint);
+        SkPaint.setColor(*textPaint, 0xFF000000);
+
+        text := "Hello from Skia (default font)!";
+        SkCanvas.drawSimpleText(canvas, text.data, cast(u64)text.count, SkTextEncoding.kUTF8, 100.0, 450.0, font, textPaint);
+
+        SkPaint.Destructor(*textPaint);
+    }
+
+    // Clean up font manager reference
+    sk_sp_unref(*sp_fontmgr);
 
     print("Drawing complete. Encoding to PNG...\n");
 

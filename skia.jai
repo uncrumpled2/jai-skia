@@ -38,6 +38,115 @@ UnknownTemplateArgumentPlaceholder :: void;
 PlaceholderForUnsupportedArgument :: void;
 enable_if_t :: struct(T: Type) {};
 
+// =============================================================================
+// sk_sp<T> FFI Helpers
+// =============================================================================
+//
+// WARNING: Functions that take sk_sp<T> by value have broken FFI semantics.
+// The value gets corrupted when passed from Jai to C++ due to ABI differences
+// in how single-pointer structs are passed (registers vs stack).
+//
+// Use the *_safe wrapper functions or manually set fPtr fields instead.
+//
+// Affected functions include:
+// - SkFont.Constructor(sk_sp<SkTypeface>, ...)
+// - SkFont.setTypeface(sk_sp<SkTypeface>)
+// - SkPaint methods taking sk_sp<SkShader>, sk_sp<SkColorFilter>, etc.
+// - Any function with sk_sp<T> parameter (not pointer to sk_sp)
+// =============================================================================
+
+// Reference counting helpers for sk_sp (ref/unref are inlined in C++ headers)
+libskia_ref_helper :: #library "skia_ref_helper";
+sk_ref_cnt_ref :: (ptr: *void) -> void #foreign libskia_ref_helper;
+sk_ref_cnt_unref :: (ptr: *void) -> void #foreign libskia_ref_helper;
+sk_ref_cnt_get_count :: (ptr: *void) -> s32 #foreign libskia_ref_helper;
+
+// Helper to increment reference count for any SkRefCnt-derived type
+sk_sp_ref :: (sp: *$T/sk_sp) {
+    if sp.fPtr {
+        sk_ref_cnt_ref(sp.fPtr);
+    }
+}
+
+// Helper to decrement reference count for any SkRefCnt-derived type
+sk_sp_unref :: (sp: *$T/sk_sp) {
+    if sp.fPtr {
+        sk_ref_cnt_unref(sp.fPtr);
+        sp.fPtr = null;
+    }
+}
+
+// Helper to reset an sk_sp to a new pointer (handles refcounting)
+sk_sp_reset :: (sp: *$T/sk_sp, new_ptr: *T.element_type) {
+    old_ptr := sp.fPtr;
+    sp.fPtr = new_ptr;
+    if new_ptr {
+        sk_ref_cnt_ref(new_ptr);
+    }
+    if old_ptr {
+        sk_ref_cnt_unref(old_ptr);
+    }
+}
+
+// =============================================================================
+// SkFont Safe Wrappers (work around sk_sp by-value ABI issue)
+// =============================================================================
+
+// Create an SkFont with a typeface and size, avoiding sk_sp by-value ABI issues
+SkFont_make :: (typeface: *SkTypeface, size: SkScalar) -> SkFont {
+    font: SkFont;
+    SkFont.Constructor(*font);  // Default constructor
+    SkFont.setSize(*font, size);
+    SkFont_setTypeface_safe(*font, typeface);
+    return font;
+}
+
+// Create an SkFont with a typeface, size, scale, and skew
+SkFont_make :: (typeface: *SkTypeface, size: SkScalar, scaleX: SkScalar, skewX: SkScalar) -> SkFont {
+    font: SkFont;
+    SkFont.Constructor(*font);  // Default constructor
+    SkFont.setSize(*font, size);
+    SkFont.setScaleX(*font, scaleX);
+    SkFont.setSkewX(*font, skewX);
+    SkFont_setTypeface_safe(*font, typeface);
+    return font;
+}
+
+// Set typeface on an SkFont without sk_sp by-value ABI issues
+SkFont_setTypeface_safe :: (font: *SkFont, typeface: *SkTypeface) {
+    // Increment refcount for the new typeface (we're sharing ownership)
+    if typeface {
+        sk_ref_cnt_ref(typeface);
+    }
+    // Decrement refcount for the old typeface
+    if font.fTypeface.fPtr {
+        sk_ref_cnt_unref(font.fTypeface.fPtr);
+    }
+    // Direct assignment to avoid sk_sp by-value ABI issue
+    font.fTypeface.fPtr = typeface;
+}
+
+// Clean up an SkFont (decrement typeface refcount)
+SkFont_destroy :: (font: *SkFont) {
+    if font.fTypeface.fPtr {
+        sk_ref_cnt_unref(font.fTypeface.fPtr);
+        font.fTypeface.fPtr = null;
+    }
+}
+
+// =============================================================================
+// Custom Font Manager Creation (not in wrapper.h but exported by libskia.so)
+// =============================================================================
+
+// Create a font manager that loads fonts from a directory
+SkFontMgr_New_Custom_Directory :: (path: *u8) -> sk_sp(SkFontMgr) #cpp_return_type_is_non_pod #foreign libskia "_Z30SkFontMgr_New_Custom_DirectoryPKc";
+
+// Create an empty custom font manager
+SkFontMgr_New_Custom_Empty :: () -> sk_sp(SkFontMgr) #cpp_return_type_is_non_pod #foreign libskia "_Z26SkFontMgr_New_Custom_Emptyv";
+
+// Create a font manager from SkData spans
+SkFontMgr_New_Custom_Data :: (data_span: SkSpan(sk_sp(SkData))) -> sk_sp(SkFontMgr) #cpp_return_type_is_non_pod #foreign libskia "_Z25SkFontMgr_New_Custom_Data6SkSpanI5sk_spI6SkDataEE";
+
 
 //
 // This file was auto-generated using the following command:
