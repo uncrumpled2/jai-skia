@@ -117,6 +117,9 @@ echo skia_use_gl=false
 echo skia_enable_pdf=false
 echo skia_use_libwebp_decode=false
 echo skia_use_libwebp_encode=false
+echo skia_use_freetype=true
+echo skia_enable_fontmgr_custom_directory=true
+echo skia_enable_fontmgr_custom_empty=true
 ) > out\Release\args.gn
 
 REM Add clang_win if available
