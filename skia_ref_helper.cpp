@@ -1,6 +1,6 @@
 // skia_ref_helper.cpp
 // Helper to expose SkRefCntBase::ref() and unref() which are inlined in Skia headers
-// and not exported from libskia.so.
+// and not exported from the Skia shared library.
 //
 // SkRefCntBase memory layout (x86-64):
 //   - vtable pointer (8 bytes at offset 0)
@@ -10,24 +10,36 @@
 // without calling the inlined C++ functions directly.
 
 #include <cstdint>
+#include <atomic>
+
+// Platform-specific export macro
+#ifdef _WIN32
+    #define SK_HELPER_EXPORT __declspec(dllexport)
+#else
+    #define SK_HELPER_EXPORT __attribute__((visibility("default")))
+#endif
 
 extern "C" {
     // Increment the reference count of an SkRefCntBase-derived object
-    void sk_ref_cnt_ref(void* ptr) {
+    SK_HELPER_EXPORT void sk_ref_cnt_ref(void* ptr) {
         if (ptr) {
             // refcount is at offset 8 (after vtable pointer)
-            int32_t* refcnt = reinterpret_cast<int32_t*>(static_cast<char*>(ptr) + 8);
-            __atomic_add_fetch(refcnt, 1, __ATOMIC_RELAXED);
+            std::atomic<int32_t>* refcnt = reinterpret_cast<std::atomic<int32_t>*>(
+                static_cast<char*>(ptr) + 8
+            );
+            refcnt->fetch_add(1, std::memory_order_relaxed);
         }
     }
 
     // Decrement the reference count of an SkRefCntBase-derived object
     // If the count reaches 0, calls the destructor through the vtable
-    void sk_ref_cnt_unref(void* ptr) {
+    SK_HELPER_EXPORT void sk_ref_cnt_unref(void* ptr) {
         if (ptr) {
-            int32_t* refcnt = reinterpret_cast<int32_t*>(static_cast<char*>(ptr) + 8);
-            if (__atomic_sub_fetch(refcnt, 1, __ATOMIC_ACQ_REL) == 0) {
-                // Call destructor through vtable
+            std::atomic<int32_t>* refcnt = reinterpret_cast<std::atomic<int32_t>*>(
+                static_cast<char*>(ptr) + 8
+            );
+            if (refcnt->fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                // Count was 1, now 0 - call destructor through vtable
                 // The vtable layout for SkRefCntBase:
                 //   [0] = Destructor (D1 - complete object destructor)
                 //   [1] = Destructor_Deleting (D0 - deleting destructor)
@@ -43,10 +55,12 @@ extern "C" {
     }
 
     // Get the current reference count (for debugging)
-    int32_t sk_ref_cnt_get_count(void* ptr) {
+    SK_HELPER_EXPORT int32_t sk_ref_cnt_get_count(void* ptr) {
         if (ptr) {
-            int32_t* refcnt = reinterpret_cast<int32_t*>(static_cast<char*>(ptr) + 8);
-            return __atomic_load_n(refcnt, __ATOMIC_RELAXED);
+            std::atomic<int32_t>* refcnt = reinterpret_cast<std::atomic<int32_t>*>(
+                static_cast<char*>(ptr) + 8
+            );
+            return refcnt->load(std::memory_order_relaxed);
         }
         return -1;
     }

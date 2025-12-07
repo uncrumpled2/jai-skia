@@ -2,31 +2,99 @@
 
 Automatically generated Jai bindings for the [Skia](https://skia.org/) 2D graphics library.
 
+## Supported Platforms
+
+- **Windows** (x64) - MSVC ABI, requires `skia.dll`
+- **Linux** (x64) - Itanium ABI, requires `libskia.so`
+- **macOS** (x64/arm64) - Itanium ABI, requires `libskia.dylib`
+
 ## Requirements
 
+### All Platforms
 - Jai compiler
-- Pre-built `libskia.so` (shared library)
+
+### Windows
+- Pre-built `skia.dll` and `skia.dll.lib` (or `skia.lib`)
+- `skia_dll_symbols.txt` (exported symbols list)
+- LLVM/Clang or Visual Studio Build Tools (for building the helper DLL)
+
+### Linux
+- Pre-built `libskia.so`
 - `libskia_symbols.txt` (exported symbols list, generated via `nm -D libskia.so`)
+- GCC or Clang (for building the helper shared library)
 
-## Building the Bindings
+### macOS
+- Pre-built `libskia.dylib`
+- Xcode Command Line Tools
 
-1. Ensure `libskia.so` is in the project directory
-2. Generate the symbols list:
-   ```bash
-   nm -D libskia.so | awk '{print $3}' | sort -u > libskia_symbols.txt
-   ```
-3. Run the bindings generator:
-   ```bash
-   jai generate.jai
-   ```
+## Building Skia
 
-This produces `skia.jai` with all necessary post-processing applied.
+### Windows
+
+Run the included build script:
+```batch
+build_skia.bat
+```
+
+This will:
+1. Sync Skia dependencies
+2. Configure a release build with `is_component_build=true` (creates DLL)
+3. Build Skia
+4. Copy `skia.dll` and `skia.dll.lib` to the project root
+
+**Note:** For best performance, install [LLVM/Clang](https://releases.llvm.org/download.html) before building.
+
+### Linux
+
+```bash
+cd skia
+python3 tools/git-sync-deps
+bin/gn gen out/Release --args='is_component_build=true is_official_build=false'
+ninja -C out/Release skia
+cp out/Release/libskia.so ..
+```
+
+## Generating Bindings
+
+The bindings generator automatically detects the platform and generates appropriate bindings:
+
+```bash
+jai generate.jai
+```
+
+This produces platform-specific binding files:
+- **Windows:** `skia_windows.jai`
+- **Linux:** `skia_linux.jai`
+- **macOS:** `skia_macos.jai`
+
+The unified `skia.jai` loader automatically includes the correct platform bindings at compile time.
+
+### Generating Symbol Lists
+
+#### Windows
+```bash
+python get_exports.py
+```
+This creates `skia_dll_symbols.txt` from `skia.dll`.
+
+#### Linux
+```bash
+nm -D libskia.so | awk '{print $3}' | sort -u > libskia_symbols.txt
+```
 
 ## Building Your Project
 
-The `build.jai` script automatically compiles `skia_ref_helper.cpp` into `skia_ref_helper.so` if it doesn't exist. This helper library is required for reference counting functionality.
+### Quick Start
 
-See `build.jai` for an example build script. Key points:
+```bash
+jai build.jai
+```
+
+The build script automatically:
+1. Compiles `skia_ref_helper.cpp` into a platform-specific shared library
+2. Builds the example application
+
+### Manual Build Setup
 
 ```jai
 #import "Basic";
@@ -36,21 +104,29 @@ See `build.jai` for an example build script. Key points:
     set_build_options_dc(.{do_output=false});
 
     w := compiler_create_workspace("MyApp");
-
     options := get_build_options(w);
     options.output_executable_name = "myapp";
 
-    // Add current directory to import path for skia
+    // Add current directory to import path
     import_path: [..] string;
     array_add(*import_path, ..options.import_path);
     array_add(*import_path, ".");
     options.import_path = import_path;
 
-    // Add linker path for libskia.so
-    linker_args: [..] string;
-    array_add(*linker_args, ..options.additional_linker_arguments);
-    array_add(*linker_args, "-L.");
-    options.additional_linker_arguments = linker_args;
+    #if OS == .WINDOWS {
+        // Windows: link against import libraries
+        linker_args: [..] string;
+        array_add(*linker_args, ..options.additional_linker_arguments);
+        array_add(*linker_args, "skia.dll.lib");
+        array_add(*linker_args, "skia_ref_helper.lib");
+        options.additional_linker_arguments = linker_args;
+    } else {
+        // Linux/macOS: add library search path
+        linker_args: [..] string;
+        array_add(*linker_args, ..options.additional_linker_arguments);
+        array_add(*linker_args, "-L.");
+        options.additional_linker_arguments = linker_args;
+    }
 
     set_build_options(options, w);
     add_build_file("main.jai", w);
@@ -59,27 +135,58 @@ See `build.jai` for an example build script. Key points:
 
 Import the bindings in your code:
 ```jai
+#load "skia.jai";
+// or if set up as a module:
 #import "skia";
 ```
 
 ## Running Your Program
 
-The executable needs access to `libskia.so`, `skia_ref_helper.so`, and Jai's `libbacktrace.so.0`:
+### Windows
+Ensure `skia.dll` and `skia_ref_helper.dll` are in the same directory as your executable or in the system PATH.
 
-```bash
-LD_LIBRARY_PATH="/path/to/jai/modules:." ./myapp
+```batch
+example.exe
 ```
 
-If all libraries are in the current directory and you have Jai installed at `/root/programming/jai`:
+### Linux
 ```bash
-LD_LIBRARY_PATH="/root/programming/jai/modules:." ./myapp
+LD_LIBRARY_PATH="/path/to/jai/modules:." ./example
+```
+
+### macOS
+```bash
+DYLD_LIBRARY_PATH="." ./example
+```
+
+## Project Structure
+
+```
+jai-skia/
+├── skia.jai              # Platform loader (includes correct bindings)
+├── skia_windows.jai      # Windows-specific bindings (MSVC mangling)
+├── skia_linux.jai        # Linux-specific bindings (Itanium mangling)
+├── skia_macos.jai        # macOS-specific bindings (Itanium mangling)
+├── generate.jai          # Bindings generator
+├── build.jai             # Example build script
+├── example.jai           # Example application
+├── skia_ref_helper.cpp   # Reference counting helper (cross-platform)
+├── wrapper.h             # C++ headers for binding generation
+├── build_skia.bat        # Windows Skia build script
+├── get_exports.py        # Windows DLL symbol extractor
+├── skia_dll_symbols.txt  # Windows exported symbols
+├── libskia_symbols.txt   # Linux exported symbols
+├── skia.dll              # Windows Skia library
+├── skia.dll.lib          # Windows import library
+├── skia.lib              # Windows import library (copy)
+└── skia/                 # Skia source tree
 ```
 
 ## API Differences from C++
 
 ### 1. Struct Initialization
 
-C++ constructors are exposed as `Constructor` methods. Default initialization in Jai zero-initializes the struct, which may not match C++ default constructor behavior.
+C++ constructors are exposed as `Constructor` methods:
 
 **C++:**
 ```cpp
@@ -94,7 +201,7 @@ SkPaint.Constructor(*paint);  // Explicitly call constructor
 
 ### 2. Method Calls
 
-C++ methods become struct member functions. Use dot syntax with explicit `this` pointer:
+C++ methods become struct member functions with explicit `this` pointer:
 
 **C++:**
 ```cpp
@@ -110,7 +217,7 @@ SkCanvas.drawRect(canvas, rect, paint);
 
 ### 3. Smart Pointers (`sk_sp<T>`)
 
-Skia uses `sk_sp<T>` for reference-counted objects. In these bindings, `sk_sp` is a simple struct wrapper:
+Skia uses `sk_sp<T>` for reference-counted objects. In these bindings, `sk_sp` is a simple struct:
 
 ```jai
 sk_sp :: struct(T: Type) {
@@ -118,97 +225,43 @@ sk_sp :: struct(T: Type) {
 }
 ```
 
-Functions returning `sk_sp<T>` return this struct. Access the raw pointer via `.fPtr`:
+Access the raw pointer via `.fPtr`:
 
-**C++:**
-```cpp
-sk_sp<SkSurface> surface = SkSurfaces::Raster(info);
-SkCanvas* canvas = surface->getCanvas();
-```
-
-**Jai:**
 ```jai
 sp_surface := SkSurfaces.WrapPixels(info, pixels, row_bytes, null);
 surface := sp_surface.fPtr;
 canvas := SkSurface.getCanvas(surface);
 ```
 
-**Important:** The Jai bindings do NOT automatically call `unref()` when `sk_sp` goes out of scope. For long-running applications, you should manually manage reference counts using the helper functions below.
+**Important:** The Jai bindings do NOT automatically call `unref()` when `sk_sp` goes out of scope.
 
-#### sk_sp Reference Counting Helpers
-
-Since `SkRefCntBase::ref()` and `unref()` are inlined in C++ headers and not exported from `libskia.so`, these bindings include a helper library (`skia_ref_helper.so`) that provides reference counting:
+#### Reference Counting Helpers
 
 ```jai
-// Increment reference count
-sk_ref_cnt_ref :: (ptr: *void) -> void;
+sk_ref_cnt_ref :: (ptr: *void) -> void;      // Increment reference count
+sk_ref_cnt_unref :: (ptr: *void) -> void;    // Decrement (destroys at 0)
+sk_ref_cnt_get_count :: (ptr: *void) -> s32; // Get count (debugging)
 
-// Decrement reference count (calls destructor when count reaches 0)
-sk_ref_cnt_unref :: (ptr: *void) -> void;
-
-// Get current reference count (for debugging)
-sk_ref_cnt_get_count :: (ptr: *void) -> s32;
-
-// Convenience wrappers for sk_sp types
-sk_sp_ref :: (sp: *$T/sk_sp);    // Increment refcount of sp.fPtr
-sk_sp_unref :: (sp: *$T/sk_sp);  // Decrement refcount and set fPtr to null
-sk_sp_reset :: (sp: *$T/sk_sp, new_ptr: *T.element_type);  // Replace with new pointer
-```
-
-Example cleanup:
-```jai
-sp_surface := SkSurfaces.WrapPixels(info, pixels, row_bytes, null);
-// ... use surface ...
-sk_sp_unref(*sp_surface);  // Clean up when done
+// Convenience wrappers
+sk_sp_ref :: (sp: *$T/sk_sp);
+sk_sp_unref :: (sp: *$T/sk_sp);
+sk_sp_reset :: (sp: *$T/sk_sp, new_ptr: *T.element_type);
 ```
 
 #### sk_sp By-Value ABI Issue
 
-**Warning:** Functions that take `sk_sp<T>` **by value** (not by pointer) have broken FFI semantics. The value gets corrupted when passed from Jai to C++ due to ABI differences in how single-pointer structs are passed.
+**Warning:** Functions taking `sk_sp<T>` by value have broken FFI semantics due to ABI differences.
 
-Affected functions include:
-- `SkFont.Constructor(sk_sp<SkTypeface>, ...)`
-- `SkFont.setTypeface(sk_sp<SkTypeface>)`
-- `SkPaint.setShader(sk_sp<SkShader>)`
-- `SkPaint.setColorFilter(sk_sp<SkColorFilter>)`
-- Any function with `sk_sp<T>` parameter (not `*sk_sp<T>`)
-
-**Solution:** Use the safe wrapper functions or manually set `fPtr` fields:
+**Solution:** Use safe wrapper functions:
 
 ```jai
-// Safe wrappers for SkFont (recommended)
+// Safe wrappers for SkFont
 SkFont_make :: (typeface: *SkTypeface, size: SkScalar) -> SkFont;
-SkFont_make :: (typeface: *SkTypeface, size: SkScalar, scaleX: SkScalar, skewX: SkScalar) -> SkFont;
 SkFont_setTypeface_safe :: (font: *SkFont, typeface: *SkTypeface);
-SkFont_destroy :: (font: *SkFont);  // Clean up typeface reference
-```
-
-Example with custom typeface:
-```jai
-// Load a typeface from a font directory
-sp_fontmgr := SkFontMgr_New_Custom_Directory("/usr/share/fonts/truetype/dejavu");
-sp_typeface := SkFontMgr.makeFromFile(sp_fontmgr.fPtr, "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 0);
-
-if sp_typeface.fPtr {
-    // Use the safe wrapper to create a font with the typeface
-    font := SkFont_make(sp_typeface.fPtr, 24.0);
-
-    // Draw text
-    paint: SkPaint;
-    SkPaint.Constructor(*paint);
-    SkCanvas.drawSimpleText(canvas, "Hello!", 6, .kUTF8, 100, 100, font, paint);
-
-    // Clean up
-    SkFont_destroy(*font);
-    SkPaint.Destructor(*paint);
-}
-
-sk_sp_unref(*sp_fontmgr);
+SkFont_destroy :: (font: *SkFont);
 ```
 
 ### 4. Operator Renaming
-
-C++ operators are renamed since Jai doesn't allow operator symbols in identifiers:
 
 | C++ Operator | Jai Name |
 |--------------|----------|
@@ -216,125 +269,35 @@ C++ operators are renamed since Jai doesn't allow operator symbols in identifier
 | `operator-`  | `operator_minus` |
 | `operator*`  | `operator_mul` |
 | `operator/`  | `operator_div` |
-| `operator+=` | `operator_plus_equals` |
-| `operator-=` | `operator_minus_equals` |
-| `operator*=` | `operator_mul_equals` |
-| `operator/=` | `operator_div_equals` |
 | `operator==` | `operator_eq` |
 | `operator!=` | `operator_neq` |
 | `operator[]` | `operator_subscript` |
-| `operator<`  | `operator_less` |
 
 ### 5. Enums
 
-Jai enums are strongly typed. Use the enum type prefix:
-
-**C++:**
-```cpp
-SkBlendMode::kSrc
-SkColorType::kRGBA_8888_SkColorType
-```
-
-**Jai:**
 ```jai
 SkBlendMode.Src
 SkColorType.RGBA_8888_SkColorType
 ```
 
-### 6. Color Types
+### 6. Platform-Specific Destructor Names
 
-`SkColor` is a `u32` (ARGB format). `SkColor4f` is a struct with `fR`, `fG`, `fB`, `fA` float members:
+Some destructor names differ between platforms:
 
-**C++:**
-```cpp
-canvas->clear(SK_ColorWHITE);
-// or
-SkColor4f white = {1.0f, 1.0f, 1.0f, 1.0f};
-canvas->drawColor(white, SkBlendMode::kSrc);
-```
-
-**Jai:**
 ```jai
-white: SkColor4f;
-white.fR = 1.0;
-white.fG = 1.0;
-white.fB = 1.0;
-white.fA = 1.0;
-SkCanvas.drawColor(canvas, white, .Src);
-```
-
-### 7. SkImageInfo Creation
-
-Instead of static factory methods like `SkImageInfo::MakeN32Premul()`, manually construct the struct:
-
-**C++:**
-```cpp
-SkImageInfo info = SkImageInfo::MakeN32Premul(800, 600);
-```
-
-**Jai:**
-```jai
-dimensions: SkISize;
-dimensions.fWidth = 800;
-dimensions.fHeight = 600;
-
-colorInfo: SkColorInfo;
-colorInfo.fColorType = .RGBA_8888_SkColorType;
-colorInfo.fAlphaType = .Premul_SkAlphaType;
-
-info: SkImageInfo;
-info.fDimensions = dimensions;
-info.fColorInfo = colorInfo;
-```
-
-### 8. File I/O with SkFILEWStream
-
-**C++:**
-```cpp
-SkFILEWStream stream("output.png");
-if (stream.isValid()) { ... }
-```
-
-**Jai:**
-```jai
-stream: SkFILEWStream;
-SkFILEWStream.Constructor(*stream, "output.png");
-
-if stream.fFILE {  // Check file handle directly
-    // ... use stream
+// Cleanup file stream
+#if OS == .WINDOWS {
+    SkFILEWStream.virtual_Destructor(*stream);
+} else {
+    SkFILEWStream.Destructor_Base(*stream);
 }
-
-SkFILEWStream.Destructor_Base(*stream);  // Clean up
 ```
-
-### 9. Destructors
-
-Call destructors explicitly when done with objects that have them:
-
-```jai
-SkPaint.Destructor(*paint);
-SkFILEWStream.Destructor_Base(*stream);
-```
-
-## Unavailable Functions
-
-Many inline functions, template instantiations, and internal methods are not exported from `libskia.so` and are commented out in the bindings. These include:
-
-- Most operator overloads on basic types (SkPoint, SkRect, etc.)
-- Many convenience constructors and factory methods
-- Internal/private methods
-
-If you need functionality from a commented-out function, you may need to:
-1. Implement it in Jai using available primitives
-2. Rebuild Skia with different export settings
-3. Create a C++ wrapper library that exports the needed functions
 
 ## Complete Example
 
 ```jai
 #import "Basic";
-#import "skia";
-#import "POSIX";
+#load "skia.jai";
 
 main :: () {
     // Setup image info
@@ -381,6 +344,21 @@ main :: () {
 
     SkCanvas.drawRect(canvas, rect, paint);
 
+    // Draw text (platform-specific font handling)
+    font: SkFont;
+    SkFont.Constructor(*font);
+    SkFont.setSize(*font, 24.0);
+
+    textPaint: SkPaint;
+    SkPaint.Constructor(*textPaint);
+    SkPaint.setColor(*textPaint, 0xFF000000);
+
+    text := "Hello from Skia!";
+    SkCanvas.drawSimpleText(canvas, text.data, cast(u64)text.count,
+                            SkTextEncoding.kUTF8, 100.0, 450.0, font, textPaint);
+
+    SkPaint.Destructor(*textPaint);
+
     // Encode to PNG
     sp_image := SkSurface.makeImageSnapshot(surface);
     image := sp_image.fPtr;
@@ -399,7 +377,11 @@ main :: () {
     }
 
     // Cleanup
-    SkFILEWStream.Destructor_Base(*stream);
+    #if OS == .WINDOWS {
+        SkFILEWStream.virtual_Destructor(*stream);
+    } else {
+        SkFILEWStream.Destructor_Base(*stream);
+    }
     SkPaint.Destructor(*paint);
     free(pixels);
 }
@@ -408,40 +390,66 @@ main :: () {
 ## Troubleshooting
 
 ### "Unable to resolve foreign symbol"
-The symbol is not exported from `libskia.so`. Check if it's commented out in `skia.jai`. You may need to implement the functionality differently or rebuild Skia.
+The symbol is not exported from the Skia library. Check if it's commented out in the platform bindings file.
 
-### "error while loading shared libraries: libskia.so"
-Set `LD_LIBRARY_PATH` to include the directory containing `libskia.so`:
+### Windows: "skia.dll not found"
+Ensure `skia.dll` is in the same directory as the executable or in your PATH.
+
+### Windows: "skia.lib not found" during linking
+Copy `skia.dll.lib` to `skia.lib`:
+```batch
+copy skia.dll.lib skia.lib
+```
+
+### Linux: "error while loading shared libraries: libskia.so"
 ```bash
 LD_LIBRARY_PATH="." ./myapp
 ```
 
-### "cannot open shared object file: libbacktrace.so.0"
-Add Jai's modules directory to `LD_LIBRARY_PATH`:
+### Linux: "cannot open shared object file: libbacktrace.so.0"
 ```bash
 LD_LIBRARY_PATH="/path/to/jai/modules:." ./myapp
 ```
 
 ### Crash on surface creation
-Ensure your `SkImageInfo` is properly initialized with valid color type and alpha type. Zero-initialized structs may have invalid enum values.
+Ensure `SkImageInfo` is properly initialized with valid color type and alpha type.
 
-### "cannot open shared object file: skia_ref_helper.so"
-The helper library wasn't built. Run the build script which will compile it automatically:
+### Helper library not found
+Run the build script to compile it:
 ```bash
 jai build.jai
 ```
-Or build it manually:
+
+Or build manually:
+
+**Windows (with LLVM):**
+```batch
+"C:\Program Files\LLVM\bin\clang-cl.exe" /LD /O2 skia_ref_helper.cpp /Fe:skia_ref_helper.dll
+```
+
+**Linux:**
 ```bash
 g++ -shared -fPIC -O2 -o skia_ref_helper.so skia_ref_helper.cpp
 ```
 
-### Font not rendering with custom typeface
-If you're using `SkFont.Constructor` with an `sk_sp<SkTypeface>` parameter and text isn't rendering correctly, use the safe wrapper instead:
-```jai
-// Don't use: SkFont.Constructor(*font, typeface_sp, 24.0);
-// Use this instead:
-font := SkFont_make(typeface_sp.fPtr, 24.0);
+**macOS:**
+```bash
+clang++ -shared -fPIC -O2 -o skia_ref_helper.dylib skia_ref_helper.cpp
 ```
+
+### Font not rendering
+Use the safe wrapper functions instead of passing `sk_sp<SkTypeface>` by value:
+```jai
+font := SkFont_make(typeface_ptr, 24.0);
+```
+
+## Unavailable Functions
+
+Many inline functions, template instantiations, and internal methods are not exported from the Skia shared library and are commented out in the bindings. If you need such functionality:
+
+1. Implement it in Jai using available primitives
+2. Rebuild Skia with different export settings
+3. Create a C++ wrapper library that exports the needed functions
 
 ## License
 
